@@ -1,28 +1,64 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "./Store";
 import { eingang } from "@/lib/data";
 
 const gebiete = ["Alle", "VR", "StR", "ArbR"] as const;
 const gebietName: Record<string, string> = { Alle: "Alle", VR: "Verkehr", StR: "Straf", ArbR: "Arbeit" };
 
+const hauptNav = [
+  { href: "/", label: "Mein Tag", key: "F5" },
+  { href: "/eingang", label: "Eingang", key: "F4" },
+  { href: "/akten", label: "Akten" },
+  { href: "/mail", label: "Mail" },
+  { href: "/fristen", label: "Fristen" },
+  { href: "/abrechnung", label: "Abrechnung" },
+  { href: "/adressbuch", label: "Adressbuch" },
+];
+const mehrNav = [
+  { href: "/akte", label: "Akte (Beispiel)" },
+  { href: "/akte/bearbeiten", label: "Beteiligte bearbeiten" },
+  { href: "/phasen", label: "Phasen (Kanban)" },
+  { href: "/vorlagen", label: "Vorlagen" },
+  { href: "/portal-verwaltung", label: "Portal-Verwaltung" },
+  { href: "/mandantenportal", label: "Mandantenportal (Handy)" },
+  { href: "/auswertungen", label: "Auswertungen" },
+  { href: "/protokoll", label: "Protokoll" },
+  { href: "/einstellungen", label: "Einstellungen" },
+  { href: "/einrichtung", label: "Ersteinrichtung" },
+];
+
 export default function TopBar() {
   const path = usePathname();
   const router = useRouter();
   const { gebiet, setGebiet, erledigt } = useStore();
+  const [mehr, setMehr] = useState(false);
   const offenEingang = eingang.filter((e) => !erledigt.has(e.id)).length;
 
-  // F-Tasten: F4 Eingang, F5 Mein Tag
+  // F2 Suche (später), F3 Fallaufnahme, F4 Eingang, F5 Mein Tag
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if (e.key === "F3") { e.preventDefault(); router.push("/fallaufnahme"); }
       if (e.key === "F4") { e.preventDefault(); router.push("/eingang"); }
       if (e.key === "F5") { e.preventDefault(); router.push("/"); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [router]);
+  useEffect(() => setMehr(false), [path]);
+
+  // Mandantenportal und Ersteinrichtung haben keine Kanzlei-Leiste
+  if (path.startsWith("/mandantenportal") || path.startsWith("/einrichtung")) {
+    return (
+      <div style={{ padding: "6px 12px", fontSize: 12, background: "#16191d", color: "#fff", display: "flex", gap: 12 }}>
+        <span>Vorschau</span><Link href="/" style={{ color: "#c9d3ea" }}>← zurück zur Kanzlei-Ansicht</Link>
+      </div>
+    );
+  }
+
+  const aktiv = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
 
   return (
     <div className="top">
@@ -33,11 +69,26 @@ export default function TopBar() {
         ))}
       </div>
       <nav className="nav">
-        <Link href="/" className={path === "/" ? "on" : ""}>Mein Tag <span className="k">F5</span></Link>
-        <Link href="/eingang" className={path === "/eingang" ? "on" : ""}>Eingang {offenEingang > 0 && <b>{offenEingang}</b>} <span className="k">F4</span></Link>
+        {hauptNav.map((n) => (
+          <Link key={n.href} href={n.href} className={aktiv(n.href) ? "on" : ""}>
+            {n.label}
+            {n.href === "/eingang" && offenEingang > 0 && <b> {offenEingang}</b>}
+          </Link>
+        ))}
+        <span style={{ position: "relative" }}>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMehr(!mehr); }} className={mehrNav.some((n) => aktiv(n.href)) ? "on" : ""}>Mehr ▾</a>
+          {mehr && (
+            <div style={{ position: "absolute", top: 30, left: 0, background: "#fff", border: "1px solid #c9ccd1", borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,.14)", padding: "4px 0", zIndex: 50, minWidth: 220 }}>
+              {mehrNav.map((n) => (
+                <Link key={n.href} href={n.href} style={{ display: "block", padding: "7px 14px", textDecoration: "none", color: "#16191d", borderBottom: 0 }}>{n.label}</Link>
+              ))}
+            </div>
+          )}
+        </span>
       </nav>
       <div style={{ flex: 1 }} />
-      <div className="search"><span>Suchen oder Befehl …</span><span className="k">F2</span></div>
+      <Link href="/fallaufnahme" style={{ fontSize: 12, textDecoration: "none", border: "1px dashed #b9bec4", borderRadius: 4, padding: "5px 10px", color: "#16191d" }}>+ Fallaufnahme <span className="k">F3</span></Link>
+      <div className="search" style={{ width: 220 }}><span>Suchen …</span><span className="k">F2</span></div>
       <div className="avatar">FK</div>
     </div>
   );

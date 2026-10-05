@@ -1,6 +1,6 @@
 # Kanzlei-App – Prototyp
 
-Klickbarer Prototyp der KI-Kanzleisoftware: **Mein Tag** und **Eingang**. Nur Beispieldaten, keine echte KI, Mail oder Speicherung.
+Klickbarer Prototyp der KI-Kanzleisoftware. **Mein Tag** und **Eingang** sind interaktiv, alle weiteren Seiten (Akte, Mail, Fristen, Abrechnung, Adressbuch, Vorlagen, Einstellungen, Mandantenportal …) sind als Ansichten eingebaut und über die Kopfleiste bzw. „Mehr“ erreichbar. Nur Beispieldaten, keine echte KI, Mail oder Speicherung.
 
 ## Starten
 
@@ -18,6 +18,7 @@ Dann im Browser öffnen: http://localhost:3000
 | Taste | Aktion |
 |---|---|
 | F5 | Mein Tag |
+| F3 | Fallaufnahme |
 | F4 | Eingang |
 | ↑ / ↓ | Vorgang / Dokument wählen |
 | Enter | Bestätigen |
@@ -31,5 +32,6 @@ Dann im Browser öffnen: http://localhost:3000
 - `src/lib/data.ts` – Beispieldaten und Typen
 - `src/app/page.tsx` – Mein Tag
 - `src/app/eingang/page.tsx` – Eingang
-- `src/app/akte/[id]/page.tsx` – einfache Aktenansicht
+- `src/app/*/page.tsx` – alle weiteren Seiten
+- `src/designs/` – aus den Entwürfen übernommene Ansichten (werden nach und nach durch echte Logik ersetzt)
 - `src/components/` – Kopfleiste, Zustand, Tastatur
