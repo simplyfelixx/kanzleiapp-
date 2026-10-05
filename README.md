@@ -20,7 +20,8 @@ Dann im Browser öffnen: http://localhost:3000
 | Taste | Aktion |
 |---|---|
 | F5 | Mein Tag |
-| F3 | Fallaufnahme |
+| F3 | Fallaufnahme (Freitext → neue Akte) |
+| Strg+Enter | Akte aus Fallaufnahme anlegen |
 | F4 | Eingang |
 | ↑ / ↓ | Vorgang / Dokument wählen |
 | Enter | Bestätigen |
