@@ -14,7 +14,7 @@ const reihenfolge: Prioritaet[] = ["heute", "woche", "pruefen", "wartet", "laeuf
 const datumDE = (iso: string) => iso.split("-").reverse().join(".");
 
 export default function MeinTag() {
-  const { gebiet, zeige } = useStore();
+  const { gebiete, imGebiet, zeige } = useStore();
   const [daten, setDaten] = useState<{ heute: string; vorgaenge: V[]; faellig: F[]; erledigt: number } | null>(null);
   const laden = useCallback(() => fetch("/api/meintag").then((r) => r.json()).then(setDaten), []);
   useEffect(() => { laden(); }, [laden]);
@@ -27,9 +27,9 @@ export default function MeinTag() {
       ...daten.faellig.map((f) => ({ typ: "f" as const, key: "f" + f.id, prio: fPrio(f), f })),
     ];
     return alle
-      .filter((e) => gebiet === "Alle" || (e.typ === "v" ? e.v.gebiet : e.f.gebiet) === gebiet)
+      .filter((e) => imGebiet(e.typ === "v" ? e.v.gebiet : e.f.gebiet))
       .sort((a, b) => reihenfolge.indexOf(a.prio) - reihenfolge.indexOf(b.prio));
-  }, [daten, gebiet]);
+  }, [daten, gebiete]);
 
   const [idx, setIdx] = useState(0);
   useEffect(() => { if (idx > liste.length - 1) setIdx(Math.max(0, liste.length - 1)); }, [liste.length, idx]);

@@ -10,7 +10,7 @@ const reihenfolge = ["heute", "woche", "pruefen", "wartet", "laeuft"];
 
 export default function Akten() {
   const router = useRouter();
-  const { gebiet, zeige } = useStore();
+  const { gebiete, imGebiet, zeige } = useStore();
   const [akten, setAkten] = useState<Zeile[]>([]);
   const [suche, setSuche] = useState("");
   const [neu, setNeu] = useState(false);
@@ -21,10 +21,10 @@ export default function Akten() {
   const liste = useMemo(() => {
     const q = suche.toLowerCase();
     return akten
-      .filter((a) => gebiet === "Alle" || a.gebiet === gebiet)
+      .filter((a) => imGebiet(a.gebiet))
       .filter((a) => !q || [a.id, a.titel, a.mandant, a.versicherung].some((x) => (x ?? "").toLowerCase().includes(q)))
       .sort((a, b) => reihenfolge.indexOf(a.prioritaet) - reihenfolge.indexOf(b.prioritaet));
-  }, [akten, suche, gebiet]);
+  }, [akten, suche, gebiete]);
 
   const anlegen = async () => {
     const titel = form.gegner ? `${form.mandant} ./. ${form.gegner}` : "";

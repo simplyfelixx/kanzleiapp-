@@ -11,7 +11,7 @@ const de = (s: string) => s.split("-").reverse().join(".");
 const WT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 export default function Fristen() {
-  const { gebiet, zeige } = useStore();
+  const { gebiete, imGebiet, zeige } = useStore();
   const [liste, setListe] = useState<F[] | null>(null);
   const [akten, setAkten] = useState<AkteKurz[]>([]);
   const [nurMeine, setNurMeine] = useState(false);
@@ -23,7 +23,7 @@ export default function Fristen() {
 
   const heute = iso(new Date());
   const wocheEnde = iso(new Date(Date.now() + 7 * 864e5));
-  const sicht = useMemo(() => (liste ?? []).filter((f) => (gebiet === "Alle" || f.gebiet === gebiet) && (!nurMeine || f.wer === "FK")), [liste, gebiet, nurMeine]);
+  const sicht = useMemo(() => (liste ?? []).filter((f) => imGebiet(f.gebiet) && (!nurMeine || f.wer === "FK")), [liste, gebiete, nurMeine]);
   const gruppen: [string, string, F[]][] = [
     ["Von KI erkannt – bitte bestätigen", "#8a6d00", sicht.filter((f) => !f.bestaetigt)],
     ["Überfällig", "var(--rot)", sicht.filter((f) => f.bestaetigt && f.datum < heute)],

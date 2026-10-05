@@ -32,7 +32,7 @@ const mehrNav = [
 export default function TopBar() {
   const path = usePathname();
   const router = useRouter();
-  const { gebiet, setGebiet, toast } = useStore();
+  const { gebiete: gewaehlt, gebietUmschalten, toast } = useStore();
   const [mehr, setMehr] = useState(false);
   const [offenEingang, setOffenEingang] = useState(0);
   const [ich, setIch] = useState<{ name: string; kuerzel: string; rolle: string } | null>(null);
@@ -72,7 +72,8 @@ export default function TopBar() {
       <div className="brand">Kanzlei Nord</div>
       <div className="seg">
         {gebiete.map((g) => (
-          <span key={g} className={gebiet === g ? "on" : ""} onClick={() => setGebiet(g)}>{gebietName[g]}</span>
+          <span key={g} className={(g === "Alle" ? gewaehlt.length === 0 : gewaehlt.includes(g)) ? "on" : ""}
+            title={g === "Alle" ? "Alle Rechtsgebiete" : "Klick: hinzufügen/entfernen"} onClick={() => gebietUmschalten(g)}>{gebietName[g]}</span>
         ))}
       </div>
       <nav className="nav">
