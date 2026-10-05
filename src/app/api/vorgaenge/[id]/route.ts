@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { dateiSpeichern, db, verlaufEintrag, wirkungAusfuehren, Wirkung } from "@/lib/db";
@@ -32,5 +33,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       d.prepare("UPDATE vorgaenge SET status='verworfen', erledigt_am=datetime('now','localtime') WHERE id=?").run(v.id);
     }
   })();
+  protokoll({ kategorie: "akte", aktion: b.aktion === "bestaetigen" ? "Vorgang bestätigt" : "Vorgang verworfen", akte: v.akte_id, details: `${v.aktion}: ${v.titel}` });
   return NextResponse.json({ ok: true, akte: v.akte_id });
 }

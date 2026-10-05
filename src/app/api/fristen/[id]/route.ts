@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db, plusTage, verlaufEintrag } from "@/lib/db";
@@ -37,5 +38,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     default:
       return NextResponse.json({ fehler: "unbekannte Aktion" }, { status: 400 });
   }
+  const was: Record<string, string> = { erledigt: "erledigt", verschieben: "verschoben", datum: "Datum geändert", bestaetigen: "bestätigt" };
+  protokoll({ kategorie: "frist", aktion: `${name} ${was[b.aktion]}`, akte: f.akte_id, details: `${f.titel} (${f.datum})` });
   return NextResponse.json({ ok: true });
 }

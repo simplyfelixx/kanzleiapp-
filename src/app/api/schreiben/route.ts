@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { dateiSpeichern, db, plusTage, verlaufEintrag } from "@/lib/db";
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
   const r = d.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum,datei,groesse) VALUES (?,?,?,?,?,?,?,?)")
     .run(akteId, "aus", name, typ, "Kanzlei", heute, dateiSpeichern(pdf, ".pdf"), pdf.length);
   verlaufEintrag(akteId, `${typ} an ${empfName} erstellt (${name})`, wer());
+  protokoll({ kategorie: "dokument", aktion: "Schreiben erstellt", akte: akteId, details: name });
   if (v?.wv_tage) {
     d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer) VALUES (?,?,?,?,?)").run(akteId, "wv", plusTage(v.wv_tage), v.wv_titel || `${typ}: Antwort prüfen`, wer());
   }

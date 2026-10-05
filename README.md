@@ -23,7 +23,15 @@ Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr �
 - Passwörter mit scrypt gehasht, mindestens 10 Zeichen; nach 5 Fehlversuchen 5 Minuten Sperre.
 - Sitzung als signiertes Cookie (httpOnly, SameSite=strict, 12 h). Schlüssel aus `AUTH_SECRET` oder `daten/.geheim`.
 - `src/middleware.ts` schützt alle Seiten und APIs; der Verlauf trägt das Kürzel des angemeldeten Benutzers.
+- Deaktivierte Benutzer und Rollenwechsel wirken spätestens nach 30 Sekunden.
 - Bei `next start` ohne HTTPS (nur lokal) `AUTH_HTTP=1` setzen, sonst wird das Cookie nicht gesendet.
+
+## Protokoll
+
+Unter „Mehr → Protokoll“ (Admin und Anwalt): Anmeldungen, geöffnete Akten und Dokumente, Bestätigungen, Fristen, KI-Nutzung, Benutzer- und Einstellungsänderungen.
+- Die Einträge lassen sich nicht ändern oder löschen (Datenbank-Trigger). Jede Zeile ist per SHA-256 mit der vorherigen verkettet, die Seite prüft die Kette.
+- Filter nach Zeitraum, Benutzer, Bereich, Akte und Freitext. CSV-Export.
+- Inhalte (Texte, KI-Ein- und Ausgaben) werden nicht protokolliert, nur wer was wann getan hat.
 
 ## KI (lokal, Ollama)
 

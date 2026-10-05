@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { kanzleiLaden } from "@/lib/schreiben";
@@ -16,5 +17,7 @@ export async function PUT(req: Request) {
   for (const f of felder) if (typeof b[f] === "string") neu[f] = b[f].slice(0, f === "signatur" ? 500 : 160);
   if (!/^#[0-9a-f]{6}$/i.test(neu.akzent)) neu.akzent = alt.akzent;
   db().prepare("UPDATE kanzlei SET daten=? WHERE id=1").run(JSON.stringify(neu));
+  const geaendert = felder.filter((f) => neu[f] !== alt[f]);
+  if (geaendert.length) protokoll({ kategorie: "einstellungen", aktion: "Briefkopf geändert", details: geaendert.join(", ") });
   return NextResponse.json(neu);
 }

@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { aktenIndex, dateiSpeichern, db, verlaufEintrag, Wirkung } from "@/lib/db";
@@ -95,5 +96,6 @@ export async function POST(req: Request) {
       e.dateiname, JSON.stringify(felder), JSON.stringify(folge), text.slice(0, 4000), JSON.stringify(wirkung), datei, e.datum);
     ergebnis.push({ id: Number(r.lastInsertRowid), name: e.dateiname, ziel: e.akteId ?? "unklar" });
   }
+  for (const x of ergebnis) protokoll({ kategorie: "dokument", aktion: zielAkte ? "Dokument hochgeladen" : "Dokument in Eingang hochgeladen", akte: zielAkte, details: x.name + (kiAn ? " · KI-Erkennung" : "") });
   return NextResponse.json({ dateien: ergebnis });
 }

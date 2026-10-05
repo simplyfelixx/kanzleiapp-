@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
   const k = kanzleiLaden();
   k.logo = dateiSpeichern(buf, png ? ".png" : ".jpg");
   db().prepare("UPDATE kanzlei SET daten=? WHERE id=1").run(JSON.stringify(k));
+  protokoll({ kategorie: "einstellungen", aktion: "Logo hochgeladen" });
   return NextResponse.json(k);
 }
 
@@ -24,6 +26,7 @@ export function DELETE() {
   const k = kanzleiLaden();
   k.logo = null;
   db().prepare("UPDATE kanzlei SET daten=? WHERE id=1").run(JSON.stringify(k));
+  protokoll({ kategorie: "einstellungen", aktion: "Logo entfernt" });
   return NextResponse.json(k);
 }
 

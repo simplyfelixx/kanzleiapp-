@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db, verlaufEintrag, wirkungAusfuehren, Wirkung } from "@/lib/db";
@@ -13,6 +14,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!e) return NextResponse.json({ fehler: "Dokument nicht gefunden oder schon erledigt" }, { status: 404 });
   const b = await req.json().catch(() => ({}));
   if (b.aktion === "verwerfen") {
+    protokoll({ kategorie: "eingang", aktion: "Eingang verworfen", akte: e.akte_id, details: `${e.typ} von ${e.absender} (${e.dateiname})` });
     d.prepare("UPDATE eingang SET status='verworfen', erledigt_am=datetime('now','localtime') WHERE id=?").run(e.id);
     return NextResponse.json({ ok: true });
   }
@@ -26,5 +28,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     verlaufEintrag(akte, `Eingang abgelegt: ${e.typ} von ${e.absender} (${e.dateiname})`, `bestätigt ${wer()}`);
     d.prepare("UPDATE eingang SET status='erledigt', akte_id=?, erledigt_am=datetime('now','localtime') WHERE id=?").run(akte, e.id);
   })();
+  protokoll({ kategorie: "eingang", aktion: "Eingang bestätigt", akte, details: `${e.typ} von ${e.absender} (${e.dateiname})` });
   return NextResponse.json({ ok: true, akte });
 }

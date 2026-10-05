@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import { alleAkten, db, naechstesAz } from "@/lib/db";
 
@@ -20,5 +21,6 @@ export async function POST(req: Request) {
       .run(id, titel || `${mandant} ./. ?`, String(b.gebiet ?? "VR"), "pruefen", "Mandat");
     if (mandant) d.prepare("INSERT INTO beteiligte (akte_id,rolle,name) VALUES (?,?,?)").run(id, "Mandant", mandant);
   })();
+  protokoll({ kategorie: "akte", aktion: "Akte angelegt", akte: id, details: titel || mandant });
   return NextResponse.json({ id });
 }

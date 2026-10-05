@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { akteLaden, db, FALLFELDER, verlaufEintrag } from "@/lib/db";
@@ -9,6 +10,7 @@ const az = (c: Ctx) => decodeURIComponent(c.params.id);
 
 export function GET(_: Request, c: Ctx) {
   const a = akteLaden(az(c));
+  if (a) protokoll({ kategorie: "akte", aktion: "Akte geöffnet", akte: a.akte.id });
   return a ? NextResponse.json(a) : NextResponse.json({ fehler: "nicht gefunden" }, { status: 404 });
 }
 
@@ -75,5 +77,7 @@ export async function PUT(req: Request, c: Ctx) {
     default:
       return NextResponse.json({ fehler: "unbekannte Änderung" }, { status: 400 });
   }
+  const ART: Record<string, string> = { akte: "Akte bearbeitet", falldaten: "Falldaten geändert", beteiligter: b.id ? "Beteiligten geändert" : "Beteiligten hinzugefügt", beteiligter_loeschen: "Beteiligten gelöscht", konto: "Aktenkonto geändert", konto_loeschen: "Kontoposition gelöscht", dokumente_schema: "Dokumente umbenannt" };
+  protokoll({ kategorie: "akte", aktion: ART[b.art] ?? b.art, akte: id, details: b.art === "beteiligter" ? `${b.rolle ?? ""} ${b.name ?? ""}`.trim() : b.art === "konto" ? `${b.position ?? ""}` : "" });
   return NextResponse.json(akteLaden(id));
 }

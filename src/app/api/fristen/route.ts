@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db, verlaufEintrag } from "@/lib/db";
@@ -23,5 +24,6 @@ export async function POST(req: Request) {
   const art = b.art === "frist" ? "frist" : "wv";
   const r = db().prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer,bestaetigt) VALUES (?,?,?,?,?,1)").run(akte, art, datum, titel, String(b.wer ?? wer()).slice(0, 20));
   verlaufEintrag(akte, `${art === "frist" ? "Frist" : "Wiedervorlage"} notiert: ${titel} (${datum.split("-").reverse().join(".")})`, String(b.wer ?? wer()));
+  protokoll({ kategorie: "frist", aktion: art === "frist" ? "Frist notiert" : "Wiedervorlage notiert", akte, details: `${titel} (${datum})` });
   return NextResponse.json({ id: r.lastInsertRowid });
 }

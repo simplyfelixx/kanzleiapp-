@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db, naechstesAz, plusTage, verlaufEintrag } from "@/lib/db";
@@ -47,5 +48,6 @@ export async function POST(req: Request) {
       JSON.stringify({ wv: { tage: 7, titel: "Vollmacht und Fragebogen zurück?" }, verlauf: "Vollmacht + Fragebogen an Mandant versandt", prioritaet: "wartet" }));
     d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer) VALUES (?,?,?,?,?)").run(id, "wv", plusTage(1), "Neue Akte prüfen", wer());
   })();
+  protokoll({ kategorie: "akte", aktion: "Akte angelegt (Fallaufnahme)", akte: id, details: titel });
   return NextResponse.json({ id });
 }

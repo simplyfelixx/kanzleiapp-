@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import fs from "fs";
@@ -17,6 +18,7 @@ export function GET(_: Request, { params }: { params: { id: string } }) {
   if (!row?.datei) return NextResponse.json({ fehler: "keine Datei" }, { status: 404 });
   const datei = path.join(ABLAGE, path.basename(row.datei)); // nur Dateien aus der Ablage
   if (!fs.existsSync(datei)) return NextResponse.json({ fehler: "Datei fehlt" }, { status: 404 });
+  protokoll({ kategorie: "dokument", aktion: "Dokument geöffnet", details: row.name });
   const typ = TYPEN[path.extname(datei).toLowerCase()] ?? "application/octet-stream";
   return new NextResponse(fs.readFileSync(datei), {
     headers: { "Content-Type": typ, "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(row.name)}`, "X-Content-Type-Options": "nosniff" },
@@ -31,6 +33,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   const b = await req.json().catch(() => ({}));
   const name = String(b.name ?? dok.name).replace(/[\\/:*?"<>|]/g, "_").trim().slice(0, 180) || dok.name;
   d.prepare("UPDATE dokumente SET name=?, typ=COALESCE(?, typ) WHERE id=?").run(name, b.typ ? String(b.typ).slice(0, 60) : null, dok.id);
+  if (name !== dok.name) protokoll({ kategorie: "dokument", aktion: "Dokument umbenannt", akte: dok.akte_id, details: `${dok.name} → ${name}` });
   if (name !== dok.name) verlaufEintrag(dok.akte_id, `Dokument umbenannt: ${dok.name} → ${name}`, wer());
   return NextResponse.json({ ok: true });
 }

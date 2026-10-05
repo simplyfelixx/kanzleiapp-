@@ -86,7 +86,7 @@ export default function TopBar() {
           <a href="#" onClick={(e) => { e.preventDefault(); setMehr(!mehr); }} className={mehrNav.some((n) => aktiv(n.href)) ? "on" : ""}>Mehr ▾</a>
           {mehr && (
             <div style={{ position: "absolute", top: 30, left: 0, background: "#fff", border: "1px solid #c9ccd1", borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,.14)", padding: "4px 0", zIndex: 50, minWidth: 220 }}>
-              {mehrNav.filter((n) => ich?.rolle === "admin" || !["/benutzer", "/einstellungen", "/einrichtung"].includes(n.href)).map((n) => (
+              {mehrNav.filter((n) => ich?.rolle === "admin" || !["/benutzer", "/einstellungen", "/einrichtung"].includes(n.href) && (ich?.rolle === "anwalt" || n.href !== "/protokoll")).map((n) => (
                 <Link key={n.href} href={n.href} style={{ display: "block", padding: "7px 14px", textDecoration: "none", color: "#16191d", borderBottom: 0 }}>{n.label}</Link>
               ))}
             </div>

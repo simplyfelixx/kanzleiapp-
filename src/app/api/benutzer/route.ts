@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import { alleBenutzer, benutzerAnlegen, passwortFehler } from "@/lib/auth";
 import { ROLLEN, type Rolle } from "@/lib/sitzung";
@@ -23,5 +24,6 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ fehler: "Benutzername ist schon vergeben" }, { status: 409 });
   }
+  protokoll({ kategorie: "benutzer", aktion: "Benutzer angelegt", details: `${name} (${kuerzel.toUpperCase()}), Rolle ${rolle}` });
   return NextResponse.json(alleBenutzer());
 }

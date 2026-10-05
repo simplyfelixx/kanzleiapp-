@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 // Ersten Admin anlegen – nur solange es noch keinen Benutzer gibt.
 import { NextResponse } from "next/server";
 import { anmelden, anzahlBenutzer, benutzerAnlegen, passwortFehler, sitzungsCookie } from "@/lib/auth";
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   }).immediate();
   if (!angelegt) return NextResponse.json({ fehler: "Einrichtung bereits abgeschlossen" }, { status: 403 });
   const r = anmelden(login, b.passwort);
+  if (r.ok) protokoll({ kategorie: "benutzer", aktion: "Ersten Admin angelegt", details: `${name} (${kuerzel.toUpperCase()})`, benutzer: { id: r.s.u, kuerzel: r.s.k } });
   const res = NextResponse.json({ ok: true });
   if (r.ok) res.cookies.set(await sitzungsCookie(r.s));
   return res;

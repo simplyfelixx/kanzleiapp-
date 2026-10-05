@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import { aktiveAdmins, alleBenutzer, benutzerAendern, passwortFehler } from "@/lib/auth";
 import { ROLLEN, type Rolle } from "@/lib/sitzung";
@@ -20,6 +21,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (verliertAdmin && aktiveAdmins() <= 1) return NextResponse.json({ fehler: "Es muss mindestens ein aktiver Admin bleiben" }, { status: 400 });
   if (id === ich && b.aktiv === false) return NextResponse.json({ fehler: "Eigenes Konto kann nicht deaktiviert werden" }, { status: 400 });
 
+  const was = [rolle && rolle !== ziel.rolle && `Rolle ${ziel.rolle} → ${rolle}`, typeof b.aktiv === "boolean" && (b.aktiv ? "aktiviert" : "deaktiviert"), b.passwort && "Passwort neu gesetzt"].filter(Boolean).join(", ");
+  if (was) protokoll({ kategorie: "benutzer", aktion: "Benutzer geändert", details: `${ziel.name} (${ziel.kuerzel}): ${was}` });
   benutzerAendern(id, { rolle, aktiv: typeof b.aktiv === "boolean" ? b.aktiv : undefined, passwort: b.passwort });
   return NextResponse.json(alleBenutzer());
 }

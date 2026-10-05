@@ -1,3 +1,4 @@
+import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import { kiLaden, kiSpeichern, lokaleUrl } from "@/lib/ki";
 
@@ -15,5 +16,6 @@ export async function PUT(req: Request) {
   const modell = typeof b.modell === "string" && /^[\w.:\/-]{1,80}$/.test(b.modell.trim()) ? b.modell.trim() : alt.modell;
   const neu = { aktiv: typeof b.aktiv === "boolean" ? b.aktiv : alt.aktiv, url, modell };
   kiSpeichern(neu);
+  protokoll({ kategorie: "einstellungen", aktion: "KI-Einstellungen geändert", details: `aktiv=${neu.aktiv}, Modell ${neu.modell}, ${neu.url}` });
   return NextResponse.json(neu);
 }
