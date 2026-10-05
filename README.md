@@ -15,6 +15,16 @@ npm run dev
 
 Dann im Browser öffnen: http://localhost:3000
 
+Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr → Benutzer“.
+
+## Login und Rollen
+
+- Rollen: **Admin** (Benutzer, Einstellungen, Einrichtung), **Anwalt**, **ReFa**.
+- Passwörter mit scrypt gehasht, mindestens 10 Zeichen; nach 5 Fehlversuchen 5 Minuten Sperre.
+- Sitzung als signiertes Cookie (httpOnly, SameSite=strict, 12 h). Schlüssel aus `AUTH_SECRET` oder `daten/.geheim`.
+- `src/middleware.ts` schützt alle Seiten und APIs; der Verlauf trägt das Kürzel des angemeldeten Benutzers.
+- Bei `next start` ohne HTTPS (nur lokal) `AUTH_HTTP=1` setzen, sonst wird das Cookie nicht gesendet.
+
 ## Bedienung
 
 | Taste | Aktion |

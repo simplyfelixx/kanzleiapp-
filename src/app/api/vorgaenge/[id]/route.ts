@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { dateiSpeichern, db, verlaufEintrag, wirkungAusfuehren, Wirkung } from "@/lib/db";
 import { schemaName } from "@/lib/dokerkennung";
@@ -23,11 +24,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         d.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum,datei,groesse) VALUES (?,?,?,?,?,?,?,?)")
           .run(v.akte_id, "aus", schemaName(heute, typ, "Kanzlei", ".txt"), typ, "Kanzlei", heute, dateiSpeichern(Buffer.from(text, "utf8"), ".txt"), text.length);
       }
-      wirkungAusfuehren(v.akte_id, JSON.parse(v.wirkung || "{}") as Wirkung);
-      verlaufEintrag(v.akte_id, `${v.aktion}: ${v.titel}`, "bestätigt FK");
+      wirkungAusfuehren(v.akte_id, JSON.parse(v.wirkung || "{}") as Wirkung, wer());
+      verlaufEintrag(v.akte_id, `${v.aktion}: ${v.titel}`, `bestätigt ${wer()}`);
       d.prepare("UPDATE vorgaenge SET status='erledigt', erledigt_am=datetime('now','localtime') WHERE id=?").run(v.id);
     } else {
-      verlaufEintrag(v.akte_id, `Verworfen: ${v.titel}`, "FK");
+      verlaufEintrag(v.akte_id, `Verworfen: ${v.titel}`, wer());
       d.prepare("UPDATE vorgaenge SET status='verworfen', erledigt_am=datetime('now','localtime') WHERE id=?").run(v.id);
     }
   })();

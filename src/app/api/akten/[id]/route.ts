@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { akteLaden, db, FALLFELDER, verlaufEintrag } from "@/lib/db";
 import { schemaName } from "@/lib/dokerkennung";
@@ -68,7 +69,7 @@ export async function PUT(req: Request, c: Ctx) {
         const neu = schemaName(dk.datum, String(b.typ || dk.typ), dk.absender, dk.name.match(/\.\w+$/)?.[0] ?? ".pdf");
         d.prepare("UPDATE dokumente SET name=?, typ=? WHERE id=?").run(neu, String(b.typ || dk.typ), dokId);
       }
-      if (ids.length) verlaufEintrag(id, `${ids.length} Dokument(e) nach Schema umbenannt`, "FK");
+      if (ids.length) verlaufEintrag(id, `${ids.length} Dokument(e) nach Schema umbenannt`, wer());
       break;
     }
     default:

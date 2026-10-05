@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { aktenIndex, dateiSpeichern, db, verlaufEintrag, Wirkung } from "@/lib/db";
 import { erkenneDokument } from "@/lib/dokerkennung";
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       if (!d.prepare("SELECT 1 FROM akten WHERE id=?").get(zielAkte)) return NextResponse.json({ fehler: "Akte unbekannt" }, { status: 400 });
       const r = d.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum,datei,groesse) VALUES (?,?,?,?,?,?,?,?)")
         .run(zielAkte, "ein", e.dateiname, e.typ, e.absender, e.datum, datei, buf.length);
-      verlaufEintrag(zielAkte, `Dokument abgelegt: ${e.dateiname}`, "FK");
+      verlaufEintrag(zielAkte, `Dokument abgelegt: ${e.dateiname}`, wer());
       ergebnis.push({ id: Number(r.lastInsertRowid), name: e.dateiname, ziel: zielAkte });
       continue;
     }

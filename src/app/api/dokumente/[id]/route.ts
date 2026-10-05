@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
@@ -30,6 +31,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   const b = await req.json().catch(() => ({}));
   const name = String(b.name ?? dok.name).replace(/[\\/:*?"<>|]/g, "_").trim().slice(0, 180) || dok.name;
   d.prepare("UPDATE dokumente SET name=?, typ=COALESCE(?, typ) WHERE id=?").run(name, b.typ ? String(b.typ).slice(0, 60) : null, dok.id);
-  if (name !== dok.name) verlaufEintrag(dok.akte_id, `Dokument umbenannt: ${dok.name} → ${name}`, "FK");
+  if (name !== dok.name) verlaufEintrag(dok.akte_id, `Dokument umbenannt: ${dok.name} → ${name}`, wer());
   return NextResponse.json({ ok: true });
 }

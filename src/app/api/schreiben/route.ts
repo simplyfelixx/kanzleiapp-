@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { dateiSpeichern, db, plusTage, verlaufEintrag } from "@/lib/db";
 import { schemaName } from "@/lib/dokerkennung";
@@ -23,9 +24,9 @@ export async function POST(req: Request) {
   const name = schemaName(heute, typ, empfName, ".pdf");
   const r = d.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum,datei,groesse) VALUES (?,?,?,?,?,?,?,?)")
     .run(akteId, "aus", name, typ, "Kanzlei", heute, dateiSpeichern(pdf, ".pdf"), pdf.length);
-  verlaufEintrag(akteId, `${typ} an ${empfName} erstellt (${name})`, "FK");
+  verlaufEintrag(akteId, `${typ} an ${empfName} erstellt (${name})`, wer());
   if (v?.wv_tage) {
-    d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer) VALUES (?,?,?,?,?)").run(akteId, "wv", plusTage(v.wv_tage), v.wv_titel || `${typ}: Antwort prüfen`, "FK");
+    d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer) VALUES (?,?,?,?,?)").run(akteId, "wv", plusTage(v.wv_tage), v.wv_titel || `${typ}: Antwort prüfen`, wer());
   }
   return NextResponse.json({ dokId: Number(r.lastInsertRowid), name, wv: v?.wv_tage ? plusTage(v.wv_tage) : null });
 }

@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db, verlaufEintrag } from "@/lib/db";
 
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return NextResponse.json({ fehler: "Datum fehlt" }, { status: 400 });
   if (!titel) return NextResponse.json({ fehler: "Worum geht es?" }, { status: 400 });
   const art = b.art === "frist" ? "frist" : "wv";
-  const r = db().prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer,bestaetigt) VALUES (?,?,?,?,?,1)").run(akte, art, datum, titel, String(b.wer ?? "FK").slice(0, 20));
-  verlaufEintrag(akte, `${art === "frist" ? "Frist" : "Wiedervorlage"} notiert: ${titel} (${datum.split("-").reverse().join(".")})`, String(b.wer ?? "FK"));
+  const r = db().prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer,bestaetigt) VALUES (?,?,?,?,?,1)").run(akte, art, datum, titel, String(b.wer ?? wer()).slice(0, 20));
+  verlaufEintrag(akte, `${art === "frist" ? "Frist" : "Wiedervorlage"} notiert: ${titel} (${datum.split("-").reverse().join(".")})`, String(b.wer ?? wer()));
   return NextResponse.json({ id: r.lastInsertRowid });
 }

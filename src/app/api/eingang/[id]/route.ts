@@ -1,3 +1,4 @@
+import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db, verlaufEintrag, wirkungAusfuehren, Wirkung } from "@/lib/db";
 
@@ -19,10 +20,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!akte || !d.prepare("SELECT 1 FROM akten WHERE id=?").get(akte))
     return NextResponse.json({ fehler: "Bitte zuerst eine Akte wählen" }, { status: 400 });
   d.transaction(() => {
-    wirkungAusfuehren(akte, JSON.parse(e.wirkung || "{}") as Wirkung);
+    wirkungAusfuehren(akte, JSON.parse(e.wirkung || "{}") as Wirkung, wer());
     d.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum,datei) VALUES (?,?,?,?,?,?,?)")
       .run(akte, "ein", e.dateiname, e.typ, e.absender, e.datum || new Date().toISOString().slice(0, 10), e.datei);
-    verlaufEintrag(akte, `Eingang abgelegt: ${e.typ} von ${e.absender} (${e.dateiname})`, "bestätigt FK");
+    verlaufEintrag(akte, `Eingang abgelegt: ${e.typ} von ${e.absender} (${e.dateiname})`, `bestätigt ${wer()}`);
     d.prepare("UPDATE eingang SET status='erledigt', akte_id=?, erledigt_am=datetime('now','localtime') WHERE id=?").run(akte, e.id);
   })();
   return NextResponse.json({ ok: true, akte });
