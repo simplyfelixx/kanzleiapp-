@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useStore } from "@/components/Store";
 import { useListKeys } from "@/components/useListKeys";
 
-type Dok = { id: number; quelle: string; zeit: string; typ: string; absender: string; akte_id: string | null; akte_titel: string | null; akte_phase: string | null; sicher: number; erkannt: string; dateiname: string; felder: string; folgeaktionen: string; vorschau: string };
+type Dok = { id: number; datei: string | null; quelle: string; zeit: string; typ: string; absender: string; akte_id: string | null; akte_titel: string | null; akte_phase: string | null; sicher: number; erkannt: string; dateiname: string; felder: string; folgeaktionen: string; vorschau: string };
 type AkteKurz = { id: string; titel: string };
-const filterListe = ["Alle", "MAIL", "beA", "SCAN", "PORTAL", "Unklar"] as const;
-const label: Record<string, string> = { Alle: "Alle", MAIL: "Mail", beA: "beA", SCAN: "Scan", PORTAL: "Portal", Unklar: "Unklar" };
+const filterListe = ["Alle", "UPLOAD", "MAIL", "beA", "SCAN", "PORTAL", "Unklar"] as const;
+const label: Record<string, string> = { UPLOAD: "Hochgeladen", Alle: "Alle", MAIL: "Mail", beA: "beA", SCAN: "Scan", PORTAL: "Portal", Unklar: "Unklar" };
 
 export default function Eingang() {
   const { zeige } = useStore();
@@ -16,6 +16,22 @@ export default function Eingang() {
   const [filter, setFilter] = useState<(typeof filterListe)[number]>("Alle");
   const [auswahl, setAuswahl] = useState<Set<number>>(new Set());
   const [zuordnung, setZuordnung] = useState<Record<number, string>>({});
+  const [ziehen, setZiehen] = useState(false);
+  const [laedt, setLaedt] = useState(false);
+  const hochladen = async (files: FileList | File[]) => {
+    const liste = Array.from(files);
+    if (!liste.length) return;
+    setLaedt(true);
+    const fd = new FormData();
+    liste.forEach((f) => fd.append("datei", f));
+    const r = await fetch("/api/upload", { method: "POST", body: fd });
+    const j = await r.json();
+    setLaedt(false);
+    if (!r.ok) return zeige(j.fehler ?? "Upload fehlgeschlagen");
+    zeige(`${j.dateien.length} Dokument(e) erkannt: ${j.dateien.map((x: { name: string; ziel: string }) => `${x.name} → ${x.ziel}`).join(", ")}`);
+    setFilter("Alle");
+    await laden();
+  };
 
   const laden = useCallback(() => fetch("/api/eingang").then((r) => r.json()).then(setDoks), []);
   useEffect(() => { laden(); fetch("/api/akten").then((r) => r.json()).then(setAkten); }, [laden]);
@@ -70,7 +86,8 @@ export default function Eingang() {
           {filterListe.map((q) => <span key={q} className={"chip" + (filter === q ? " on" : "")} onClick={() => { setFilter(q); setIdx(0); }}>{label[q]}</span>)}
         </div>
       </div>
-      <div className="main">
+      <div className="main" onDragOver={(ev) => { ev.preventDefault(); setZiehen(true); }} onDragLeave={() => setZiehen(false)} onDrop={(ev) => { ev.preventDefault(); setZiehen(false); hochladen(ev.dataTransfer.files); }} style={{ position: "relative" }}>
+        {ziehen && <div style={{ position: "absolute", inset: 8, border: "2px dashed var(--akzent)", background: "rgba(31,79,209,.06)", zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "var(--akzent)", pointerEvents: "none" }}>Dateien hier ablegen – sie werden erkannt und zugeordnet</div>}
         <div style={{ width: 500, borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", overflow: "auto" }}>
           {auswahl.size > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--akzent-bg)", fontSize: 12 }}>
@@ -79,6 +96,10 @@ export default function Eingang() {
               <button className="btn pri" onClick={sammel}>Alle bestätigen</button>
             </div>
           )}
+          <label style={{ display: "block", margin: "10px 16px", padding: "12px", border: "1px dashed #b9bec4", borderRadius: 4, textAlign: "center", fontSize: 13, cursor: "pointer", color: "var(--muted)" }}>
+            {laedt ? "Wird gelesen und erkannt …" : <>PDF oder Scan hierher ziehen oder <span style={{ color: "var(--akzent)" }}>Datei wählen</span></>}
+            <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt" style={{ display: "none" }} onChange={(ev) => ev.target.files && hochladen(ev.target.files)} />
+          </label>
           {liste.length === 0 && <div className="empty">Eingang leer.</div>}
           {liste.map((e, i) => (
             <div key={e.id} className={"row" + (i === idx ? " sel" : "")} style={{ gridTemplateColumns: "16px 56px 1fr 70px", padding: "11px 16px", alignItems: "start" }} onClick={() => setIdx(i)}>
@@ -96,7 +117,8 @@ export default function Eingang() {
           ))}
         </div>
         <div style={{ flex: 1, background: "#eceef1", padding: 20, display: "flex", justifyContent: "center", overflow: "auto" }}>
-          {d && (
+          {d && d.datei && <iframe src={`/api/dokumente/e${d.id}`} title={d.dateiname} style={{ width: "100%", height: "100%", border: 0, background: "#fff" }} />}
+          {d && !d.datei && (
             <div style={{ width: 480, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.12)", padding: "36px 40px", fontSize: 12, lineHeight: 1.7, fontFamily: "Georgia, serif", whiteSpace: "pre-wrap", alignSelf: "flex-start" }}>
               <div style={{ fontFamily: "IBM Plex Sans", fontWeight: 600, fontSize: 13, marginBottom: 16 }}>{d.absender}</div>
               {d.vorschau}

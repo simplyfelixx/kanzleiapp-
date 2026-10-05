@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const d = db();
   const e = d.prepare("SELECT * FROM eingang WHERE id=? AND status='offen'").get(Number(params.id)) as
-    | { id: number; akte_id: string | null; typ: string; absender: string; dateiname: string; wirkung: string }
+    | { id: number; akte_id: string | null; typ: string; absender: string; dateiname: string; wirkung: string; datei: string | null; datum: string | null; vorschau: string }
     | undefined;
   if (!e) return NextResponse.json({ fehler: "Dokument nicht gefunden oder schon erledigt" }, { status: 404 });
   const b = await req.json().catch(() => ({}));
@@ -20,6 +20,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ fehler: "Bitte zuerst eine Akte wählen" }, { status: 400 });
   d.transaction(() => {
     wirkungAusfuehren(akte, JSON.parse(e.wirkung || "{}") as Wirkung);
+    d.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum,datei) VALUES (?,?,?,?,?,?,?)")
+      .run(akte, "ein", e.dateiname, e.typ, e.absender, e.datum || new Date().toISOString().slice(0, 10), e.datei);
     verlaufEintrag(akte, `Eingang abgelegt: ${e.typ} von ${e.absender} (${e.dateiname})`, "bestätigt FK");
     d.prepare("UPDATE eingang SET status='erledigt', akte_id=?, erledigt_am=datetime('now','localtime') WHERE id=?").run(akte, e.id);
   })();

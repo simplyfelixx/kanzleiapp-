@@ -42,6 +42,7 @@ export interface KontoRow {
 }
 
 export interface FristRow { id: number; akte_id: string; art: "wv" | "frist"; datum: string; titel: string; wer: string; status: string; bestaetigt: number; quelle: string }
+export interface DokumentRow { id: number; akte_id: string; richtung: "ein" | "aus"; name: string; typ: string; absender: string; datum: string; datei: string | null; groesse: number }
 export interface VerlaufRow { id: number; akte_id: string; zeit: string; text: string; wer: string }
 
 export const FALLFELDER: { key: string; label: string }[] = [
@@ -107,15 +108,33 @@ function open(): Database.Database {
       art TEXT NOT NULL DEFAULT 'wv', datum TEXT NOT NULL, titel TEXT NOT NULL, wer TEXT NOT NULL DEFAULT 'FK',
       status TEXT NOT NULL DEFAULT 'offen', bestaetigt INTEGER NOT NULL DEFAULT 1, quelle TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS dokumente (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, akte_id TEXT NOT NULL REFERENCES akten(id) ON DELETE CASCADE,
+      richtung TEXT NOT NULL DEFAULT 'ein', name TEXT NOT NULL, typ TEXT NOT NULL DEFAULT 'Sonstiges',
+      absender TEXT NOT NULL DEFAULT '', datum TEXT NOT NULL, datei TEXT, groesse INTEGER NOT NULL DEFAULT 0,
+      angelegt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
     CREATE TABLE IF NOT EXISTS verlauf (
       id INTEGER PRIMARY KEY AUTOINCREMENT, akte_id TEXT NOT NULL REFERENCES akten(id) ON DELETE CASCADE,
       zeit TEXT NOT NULL DEFAULT (datetime('now','localtime')), text TEXT NOT NULL, wer TEXT NOT NULL DEFAULT ''
     );
   `);
+  // Spalten, die in späteren Versionen dazugekommen sind
+  const spalten = (db.prepare("PRAGMA table_info(eingang)").all() as { name: string }[]).map((c) => c.name);
+  if (!spalten.includes("datei")) db.exec("ALTER TABLE eingang ADD COLUMN datei TEXT; ALTER TABLE eingang ADD COLUMN datum TEXT;");
   const n = (db.prepare("SELECT COUNT(*) c FROM akten").get() as { c: number }).c;
   if (n === 0) seed(db);
   const v = (db.prepare("SELECT COUNT(*) c FROM eingang").get() as { c: number }).c;
   if (v === 0 && !(db.prepare("SELECT 1 FROM verlauf LIMIT 1").get())) seedWorkflow(db);
+  if (!db.prepare("SELECT 1 FROM dokumente LIMIT 1").get() && db.prepare("SELECT 1 FROM akten WHERE id='214/26'").get()) {
+    const ins = db.prepare("INSERT INTO dokumente (akte_id,richtung,name,typ,absender,datum) VALUES ('214/26',?,?,?,?,?)");
+    ins.run("ein", "2026-08-15_Vollmacht_Mandant.pdf", "Vollmacht", "Thomas Müller", "2026-08-15");
+    ins.run("ein", "2026-08-20_Gutachten_SVBrandt.pdf", "Gutachten", "SV Brandt", "2026-08-20");
+    ins.run("aus", "2026-08-20_Akteneinsichtsgesuch_Kanzlei.pdf", "Akteneinsichtsgesuch", "Kanzlei", "2026-08-20");
+    ins.run("ein", "2026-08-22_Reparaturrechnung_AutohausNord.pdf", "Reparaturrechnung", "Autohaus Nord", "2026-08-22");
+    ins.run("aus", "2026-08-25_Anspruchsschreiben_Kanzlei.pdf", "Anspruchsschreiben", "Kanzlei", "2026-08-25");
+    ins.run("aus", "2026-09-18_Nachfrist_Kanzlei.pdf", "Erinnerung", "Kanzlei", "2026-09-18");
+  }
   return db;
 }
 
@@ -173,6 +192,7 @@ export function akteLaden(id: string) {
     beteiligte: d.prepare("SELECT * FROM beteiligte WHERE akte_id=? ORDER BY id").all(id) as BeteiligterRow[],
     konto: d.prepare("SELECT * FROM konto WHERE akte_id=? ORDER BY id").all(id) as KontoRow[],
     fristen: d.prepare("SELECT * FROM fristen WHERE akte_id=? AND status='offen' ORDER BY datum").all(id) as FristRow[],
+    dokumente: d.prepare("SELECT * FROM dokumente WHERE akte_id=? ORDER BY datum DESC, id DESC").all(id) as DokumentRow[],
     verlauf: d.prepare("SELECT * FROM verlauf WHERE akte_id=? ORDER BY zeit DESC, id DESC LIMIT 50").all(id) as VerlaufRow[],
   };
 }
@@ -259,4 +279,23 @@ export function wirkungAusfuehren(akteId: string, w: Wirkung, wer = "FK") {
 }
 export function verlaufEintrag(akteId: string, text: string, wer = "") {
   db().prepare("INSERT INTO verlauf (akte_id,text,wer) VALUES (?,?,?)").run(akteId, text, wer);
+}
+
+// ---- Dateiablage (daten/dokumente) ----
+export const ABLAGE = path.join(process.cwd(), "daten", "dokumente");
+export function dateiSpeichern(inhalt: Buffer, endung: string): string {
+  fs.mkdirSync(ABLAGE, { recursive: true });
+  const name = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${endung.replace(/[^.\w]/g, "").slice(0, 6)}`;
+  fs.writeFileSync(path.join(ABLAGE, name), inhalt);
+  return name;
+}
+
+/** Index aller Akten für die Zuordnung von Dokumenten (Zeichen, Namen). */
+export function aktenIndex() {
+  const d = db();
+  const akten = d.prepare("SELECT id, titel FROM akten").all() as { id: string; titel: string }[];
+  return akten.map((a) => {
+    const b = d.prepare("SELECT name, zeichen FROM beteiligte WHERE akte_id=?").all(a.id) as { name: string; zeichen: string }[];
+    return { id: a.id, titel: a.titel, zeichen: b.map((x) => x.zeichen).filter(Boolean), namen: b.filter((x) => x.name).map((x) => x.name) };
+  });
 }

@@ -4,7 +4,8 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { euro, prioFarbe, Prioritaet } from "@/lib/data";
 import { useStore } from "@/components/Store";
-import type { AkteRow, BeteiligterRow, KontoRow, FristRow, VerlaufRow } from "@/lib/db";
+import type { AkteRow, BeteiligterRow, KontoRow, FristRow, VerlaufRow, DokumentRow } from "@/lib/db";
+import { DOKTYPEN } from "@/lib/dokerkennung";
 
 // Felder und Rollen hier statt aus db.ts, damit kein Server-Code im Browser landet
 const FALLFELDER = [
@@ -17,7 +18,7 @@ const ROLLEN = ["Mandant", "Gegner", "Versicherung", "Werkstatt", "Gutachter", "
 const PHASEN = ["Mandat", "Unterlagen", "Anspruch", "Prüffrist", "Kürzung", "Klage", "Abschluss"];
 const PRIOS: [Prioritaet, string][] = [["heute", "Heute"], ["woche", "Diese Woche"], ["pruefen", "Prüfen"], ["wartet", "Wartet"], ["laeuft", "Läuft"]];
 
-type Daten = { akte: AkteRow; beteiligte: BeteiligterRow[]; konto: KontoRow[]; fristen: FristRow[]; verlauf: VerlaufRow[] };
+type Daten = { akte: AkteRow; beteiligte: BeteiligterRow[]; konto: KontoRow[]; fristen: FristRow[]; verlauf: VerlaufRow[]; dokumente: DokumentRow[] };
 const de = (s: string) => s.slice(0, 10).split("-").reverse().join(".");
 const leer = (rolle: string): Partial<BeteiligterRow> => ({ rolle, name: "", adresse: "", telefon: "", email: "", iban: "", ansprechpartner: "", zeichen: "", vorsteuer: 0, notiz: "" });
 
@@ -156,6 +157,8 @@ export default function AktePage() {
             ))}
           </div>
         </div>
+        <Dokumente az={az} doks={d.dokumente} neuladen={neuladen} zeige={zeige} />
+
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
           {/* Fristen & Wiedervorlagen */}
           <div>
@@ -265,4 +268,85 @@ function Inline({ value, onSave, multiline, platzhalter, style }: { value: strin
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" && !(multiline && e.shiftKey)) { e.preventDefault(); fertig(); } if (e.key === "Escape") { e.stopPropagation(); setV(value); setEdit(false); } },
   };
   return multiline ? <textarea {...props} style={{ width: "100%", minHeight: 56 }} /> : <input {...props} style={{ width: "100%", ...style }} />;
+}
+
+type Sortierung = "datum" | "beteiligter" | "typ";
+function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRow[]; neuladen: () => void; zeige: (m: string) => void }) {
+  const [sort, setSort] = useState<Sortierung>("datum");
+  const [auswahl, setAuswahl] = useState<Set<number>>(new Set());
+  const [schemaTyp, setSchemaTyp] = useState("");
+  const [umbenennen, setUmbenennen] = useState<{ id: number; name: string } | null>(null);
+  const [ziehen, setZiehen] = useState(false);
+
+  const sortiert = [...doks].sort((a, b) =>
+    sort === "datum" ? b.datum.localeCompare(a.datum) || b.id - a.id
+    : sort === "typ" ? a.typ.localeCompare(b.typ) || b.datum.localeCompare(a.datum)
+    : a.absender.localeCompare(b.absender) || b.datum.localeCompare(a.datum));
+  const gruppe = (x: DokumentRow) => (sort === "typ" ? x.typ : sort === "beteiligter" ? x.absender || "–" : "");
+
+  const hochladen = async (files: FileList) => {
+    const fd = new FormData();
+    Array.from(files).forEach((f) => fd.append("datei", f));
+    fd.append("akteId", az);
+    const r = await fetch("/api/upload", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) return zeige(j.fehler ?? "Upload fehlgeschlagen");
+    zeige(`Abgelegt: ${j.dateien.map((x: { name: string }) => x.name).join(", ")}`);
+    neuladen();
+  };
+  const sammel = async () => {
+    await fetch(`/api/akten/${encodeURIComponent(az)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ art: "dokumente_schema", ids: Array.from(auswahl), typ: schemaTyp || undefined }) });
+    zeige(`${auswahl.size} Dokument(e) umbenannt`); setAuswahl(new Set()); neuladen();
+  };
+  const speichern = async (id: number, body: object) => {
+    await fetch(`/api/dokumente/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    neuladen();
+  };
+  const toggle = (id: number) => setAuswahl((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  return (
+    <div onDragOver={(e) => { e.preventDefault(); setZiehen(true); }} onDragLeave={() => setZiehen(false)} onDrop={(e) => { e.preventDefault(); setZiehen(false); hochladen(e.dataTransfer.files); }}
+      style={{ outline: ziehen ? "2px dashed var(--akzent)" : undefined, outlineOffset: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span className="th">Dokumente · ein- und ausgegangen</span>
+        <div style={{ flex: 1 }} />
+        <div className="seg">{(["datum", "beteiligter", "typ"] as Sortierung[]).map((x) => <span key={x} className={sort === x ? "on" : ""} onClick={() => setSort(x)}>{x === "datum" ? "Nach Datum" : x === "beteiligter" ? "Nach Beteiligtem" : "Nach Typ"}</span>)}</div>
+        <label className="btn" style={{ cursor: "pointer" }}>+ Datei<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt" style={{ display: "none" }} onChange={(e) => e.target.files && hochladen(e.target.files)} /></label>
+      </div>
+      {auswahl.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", marginTop: 6, background: "var(--akzent-bg)", borderRadius: 4, fontSize: 12 }}>
+          <b>{auswahl.size} ausgewählt</b>
+          <select className="feld" value={schemaTyp} onChange={(e) => setSchemaTyp(e.target.value)}><option value="">Typ beibehalten</option>{DOKTYPEN.map((t) => <option key={t}>{t}</option>)}</select>
+          <button className="btn pri" onClick={sammel}>Nach Schema umbenennen</button>
+          <button className="btn" onClick={() => setAuswahl(new Set())}>Abbrechen</button>
+          <span className="lab">Schema: JJJJ-MM-TT_Typ_Absender</span>
+        </div>
+      )}
+      <div style={{ marginTop: 4 }}>
+        {sortiert.length === 0 && <div className="lab" style={{ padding: "8px 0" }}>Noch keine Dokumente. Dateien hierher ziehen oder „+ Datei“.</div>}
+        {sortiert.map((x, i) => (
+          <div key={x.id}>
+            {gruppe(x) && gruppe(x) !== gruppe(sortiert[i - 1] ?? ({} as DokumentRow)) && <div className="lab" style={{ padding: "8px 0 2px", fontWeight: 600 }}>{gruppe(x)}</div>}
+            <div style={{ display: "grid", gridTemplateColumns: "16px 18px 80px 1fr 170px 130px", gap: 8, alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--line2)", fontSize: 13 }}>
+              <span className={"cb" + (auswahl.has(x.id) ? " on" : "")} onClick={() => toggle(x.id)}>{auswahl.has(x.id) ? "✓" : ""}</span>
+              <span title={x.richtung === "ein" ? "eingegangen" : "ausgegangen"} style={{ fontWeight: 600, color: x.richtung === "ein" ? "var(--gruen)" : "var(--akzent)" }}>{x.richtung === "ein" ? "↓" : "↑"}</span>
+              <span className="mono lab" style={{ fontSize: 12 }}>{x.datum.split("-").reverse().join(".")}</span>
+              {umbenennen?.id === x.id
+                ? <input autoFocus className="feld" value={umbenennen.name} onChange={(e) => setUmbenennen({ id: x.id, name: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === "Enter") { speichern(x.id, { name: umbenennen.name }); setUmbenennen(null); } if (e.key === "Escape") setUmbenennen(null); }}
+                    onBlur={() => { speichern(x.id, { name: umbenennen.name }); setUmbenennen(null); }} />
+                : <span style={{ display: "flex", gap: 6, alignItems: "center", minWidth: 0 }}>
+                    {x.datei ? <a href={`/api/dokumente/${x.id}`} target="_blank" rel="noreferrer" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</a> : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</span>}
+                    <a href="#" className="lab" onClick={(e) => { e.preventDefault(); setUmbenennen({ id: x.id, name: x.name }); }}>✎</a>
+                  </span>}
+              <select className="feld" style={{ padding: "2px 4px", fontSize: 12 }} value={x.typ} onChange={(e) => speichern(x.id, { typ: e.target.value })}>
+                {[...new Set([x.typ, ...DOKTYPEN])].map((t) => <option key={t}>{t}</option>)}
+              </select>
+              <span className="lab" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.absender}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

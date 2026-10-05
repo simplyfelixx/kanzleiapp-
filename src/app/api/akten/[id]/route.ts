@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { akteLaden, db, FALLFELDER } from "@/lib/db";
+import { akteLaden, db, FALLFELDER, verlaufEintrag } from "@/lib/db";
+import { schemaName } from "@/lib/dokerkennung";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: { id: string } };
@@ -58,6 +59,18 @@ export async function PUT(req: Request, c: Ctx) {
     case "konto_loeschen":
       d.prepare("DELETE FROM konto WHERE id=? AND akte_id=?").run(Number(b.id), id);
       break;
+    case "dokumente_schema": {
+      // Sammel-Umbenennung nach Kanzlei-Schema JJJJ-MM-TT_Typ_Absender
+      const ids: number[] = Array.isArray(b.ids) ? b.ids.map(Number) : [];
+      for (const dokId of ids) {
+        const dk = d.prepare("SELECT * FROM dokumente WHERE id=? AND akte_id=?").get(dokId, id) as { name: string; typ: string; absender: string; datum: string } | undefined;
+        if (!dk) continue;
+        const neu = schemaName(dk.datum, String(b.typ || dk.typ), dk.absender, dk.name.match(/\.\w+$/)?.[0] ?? ".pdf");
+        d.prepare("UPDATE dokumente SET name=?, typ=? WHERE id=?").run(neu, String(b.typ || dk.typ), dokId);
+      }
+      if (ids.length) verlaufEintrag(id, `${ids.length} Dokument(e) nach Schema umbenannt`, "FK");
+      break;
+    }
     default:
       return NextResponse.json({ fehler: "unbekannte Änderung" }, { status: 400 });
   }
