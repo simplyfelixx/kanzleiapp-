@@ -10,6 +10,7 @@ const NUR: { pfad: string; rollen: Rolle[]; nurSchreiben?: boolean }[] = [
   { pfad: "/einstellungen", rollen: ["admin"] },
   { pfad: "/einrichtung", rollen: ["admin"] },
   { pfad: "/api/kanzlei", rollen: ["admin"], nurSchreiben: true },
+  { pfad: "/api/ki/einstellungen", rollen: ["admin"], nurSchreiben: true },
 ];
 const passt = (p: string, basis: string) => p === basis || p.startsWith(basis + "/");
 

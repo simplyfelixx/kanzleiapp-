@@ -1,7 +1,9 @@
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { aktenIndex, dateiSpeichern, db, verlaufEintrag, Wirkung } from "@/lib/db";
-import { erkenneDokument } from "@/lib/dokerkennung";
+import { erkenneDokument, schemaName } from "@/lib/dokerkennung";
+import { kiLaden } from "@/lib/ki";
+import { kiDokument } from "@/lib/kiauswertung";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,6 +36,8 @@ export async function POST(req: Request) {
   const d = db();
   const index = aktenIndex();
   const ergebnis: { id: number; name: string; ziel: string }[] = [];
+  const kiAn = kiLaden().aktiv;
+  const namen = kiAn ? Array.from(new Set(index.flatMap((a) => a.namen))) : [];
 
   for (const f of dateien) {
     if (!ERLAUBT.test(f.name)) return NextResponse.json({ fehler: `${f.name}: nur PDF, Bilder oder TXT` }, { status: 400 });
@@ -43,6 +47,17 @@ export async function POST(req: Request) {
     if (endung === ".pdf" && buf.subarray(0, 4).toString() !== "%PDF") return NextResponse.json({ fehler: `${f.name}: keine gültige PDF-Datei` }, { status: 400 });
     const text = endung === ".pdf" ? await pdfText(buf) : endung === ".txt" ? buf.toString("utf8") : "";
     const e = erkenneDokument(text, f.name, index);
+    // KI (lokal, pseudonymisiert) verfeinert Typ, Absender und Zusammenfassung; Beträge/Fristen bleiben regelbasiert
+    let kiText = "";
+    if (kiAn && text) {
+      const k = await kiDokument(text, namen).catch(() => null);
+      if (k) {
+        if (k.typ !== "Sonstiges" || e.typ === "Sonstiges") e.typ = k.typ;
+        if (k.absender) e.absender = k.absender;
+        e.dateiname = schemaName(e.datum, e.typ, e.absender, endung);
+        kiText = k.zusammenfassung;
+      }
+    }
     const datei = dateiSpeichern(buf, endung);
 
     if (zielAkte) {
@@ -70,6 +85,7 @@ export async function POST(req: Request) {
       ...e.betraege.map((b) => ({ label: b.label, wert: b.wert.toLocaleString("de-DE", { minimumFractionDigits: 2 }) + " €", quelle: "Text im Dokument" })),
       ...(e.zeichen ? [{ label: "Zeichen", wert: e.zeichen, quelle: "Text im Dokument" }] : []),
       ...(e.akteGrund ? [{ label: "Zuordnung", wert: e.akteGrund, quelle: "Abgleich mit Beteiligten" }] : []),
+      ...(kiText ? [{ label: "Inhalt", wert: kiText, quelle: "KI (lokal) – bitte gegenlesen" }] : []),
     ];
     const zeit = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
     const r = d.prepare(`INSERT INTO eingang (quelle,zeit,typ,absender,akte_id,sicher,erkannt,dateiname,felder,folgeaktionen,vorschau,wirkung,datei,datum)

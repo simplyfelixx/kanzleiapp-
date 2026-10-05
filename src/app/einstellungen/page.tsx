@@ -4,6 +4,45 @@ import { useStore } from "@/components/Store";
 
 type Kanzlei = { name: string; zusatz: string; strasse: string; ort: string; telefon: string; email: string; web: string; bank: string; akzent: string; logo: string | null; signatur: string };
 
+function KiEinstellungen() {
+  const { zeige } = useStore();
+  const [e, setE] = useState<{ aktiv: boolean; url: string; modell: string } | null>(null);
+  const [status, setStatus] = useState<{ ok: boolean; modelle: string[]; fehler?: string } | null>(null);
+  const pruefen = () => { setStatus(null); fetch("/api/ki/status").then((r) => r.json()).then(setStatus); };
+  useEffect(() => { fetch("/api/ki/einstellungen").then((r) => r.json()).then(setE); pruefen(); }, []);
+  if (!e) return null;
+  const speichern = async (neu = e) => {
+    const r = await fetch("/api/ki/einstellungen", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(neu) });
+    const j = await r.json();
+    if (!r.ok) return zeige(j.fehler ?? "Fehler");
+    setE(j); zeige("KI-Einstellungen gespeichert"); pruefen();
+  };
+  return (
+    <div style={{ marginTop: 28, maxWidth: 720 }}>
+      <div className="th" style={{ marginBottom: 8 }}>KI (lokal)</div>
+      <div className="lab" style={{ marginBottom: 10, lineHeight: 1.5 }}>
+        Läuft über <b>Ollama</b> auf diesem Rechner oder im Kanzleinetz – keine Daten ins Internet. Namen, Telefon, E-Mail, IBAN,
+        Kennzeichen und Adressen werden vor der Verarbeitung durch Platzhalter ersetzt. Jeder KI-Wert muss bestätigt werden.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 200px auto", gap: 10, alignItems: "end" }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center", paddingBottom: 6 }}>
+          <input type="checkbox" checked={e.aktiv} onChange={(x) => speichern({ ...e, aktiv: x.target.checked })} /> aktiv
+        </label>
+        <label><div className="lab">Adresse</div><input className="feld" style={{ width: "100%" }} value={e.url} onChange={(x) => setE({ ...e, url: x.target.value })} /></label>
+        <label><div className="lab">Modell</div>
+          <input className="feld" style={{ width: "100%" }} list="ki-modelle" value={e.modell} onChange={(x) => setE({ ...e, modell: x.target.value })} />
+          <datalist id="ki-modelle">{status?.modelle.map((m) => <option key={m} value={m} />)}</datalist>
+        </label>
+        <button className="btn pri" onClick={() => speichern()}>Speichern</button>
+      </div>
+      <div className="lab" style={{ marginTop: 8 }}>
+        Status: {!status ? "prüfe …" : status.ok ? `✓ bereit (${e.modell})` : `✗ ${status.fehler}`} · <a href="#" onClick={(x) => { x.preventDefault(); pruefen(); }}>erneut prüfen</a>
+      </div>
+      <div className="lab" style={{ marginTop: 4 }}>Einrichtung: Ollama installieren, dann <span className="mono">ollama pull {e.modell}</span>. Empfehlung: qwen2.5:7b (8 GB RAM) oder qwen2.5:14b (16 GB).</div>
+    </div>
+  );
+}
+
 export default function Einstellungen() {
   const { zeige } = useStore();
   const [k, setK] = useState<Kanzlei | null>(null);
@@ -79,6 +118,7 @@ export default function Einstellungen() {
           </div>
         </div>
       </div>
+          <div style={{ padding: "0 28px 28px" }}><KiEinstellungen /></div>
     </>
   );
 }

@@ -20,9 +20,26 @@ export default function Fallaufnahme() {
   const [manuell, setManuell] = useState<Partial<Erkannt>>({}); // von Hand korrigierte Felder haben Vorrang
   const [gebiet, setGebiet] = useState("VR");
   const [laeuft, setLaeuft] = useState(false);
+  // KI-Ergebnis gilt nur für den Text, aus dem es stammt
+  const [ki, setKi] = useState<{ text: string; werte: Partial<Erkannt>; belege: Partial<Record<keyof Erkannt, string>>; ersetzt: number } | null>(null);
+  const [kiLaeuft, setKiLaeuft] = useState(false);
+  const [kiStatus, setKiStatus] = useState<{ aktiv: boolean; ok: boolean; fehler?: string } | null>(null);
+  useEffect(() => { fetch("/api/ki/status").then((r) => r.json()).then(setKiStatus).catch(() => {}); }, []);
+  const kiAktuell = ki && ki.text === text ? ki : null;
+
+  const kiAuswerten = async () => {
+    if (!text.trim() || kiLaeuft) return;
+    setKiLaeuft(true);
+    const r = await fetch("/api/ki/fallaufnahme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    const j = await r.json().catch(() => ({}));
+    setKiLaeuft(false);
+    if (!r.ok) return zeige(j.fehler ?? "KI-Fehler");
+    setKi({ text, ...j });
+    zeige(`KI-Auswertung fertig · ${j.ersetzt} Angaben vorher pseudonymisiert`);
+  };
 
   const erkannt = useMemo(() => erkenne(text), [text]);
-  const werte: Erkannt = { ...LEER, ...erkannt, ...Object.fromEntries(Object.entries(manuell).filter(([, v]) => v !== undefined)) };
+  const werte: Erkannt = { ...LEER, ...erkannt, ...(kiAktuell?.werte ?? {}), ...Object.fromEntries(Object.entries(manuell).filter(([, v]) => v !== undefined)) };
   const offen = fehlt(werte);
   const worum = [
     werte.schilderung, werte.verletzt.startsWith("ja") && "Mandant verletzt.", werte.finanzierung && `Fahrzeug: ${werte.finanzierung}.`,
@@ -42,7 +59,10 @@ export default function Fallaufnahme() {
 
   // Strg+Enter = Akte anlegen
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); anlegen(); } };
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); anlegen(); }
+      if (e.key.toLowerCase() === "k" && e.altKey) { e.preventDefault(); kiAuswerten(); }
+    };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   });
@@ -69,7 +89,18 @@ export default function Fallaufnahme() {
           placeholder="z. B. „Herr Müller ruft an, 0172 …, gestern Unfall auf der Weserstraße, Gegner versichert bei der HUK …“"
           style={{ flex: 1, minHeight: 260, fontSize: 15, lineHeight: 1.7, padding: "14px 16px", resize: "none" }}
         />
-        <div className="lab">Strg+Enter = Akte anlegen · Diktat folgt mit der KI-Anbindung</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button className="btn" disabled={!text.trim() || kiLaeuft || !kiStatus?.aktiv} onClick={kiAuswerten}
+            title={!kiStatus?.aktiv ? "KI in den Einstellungen einschalten" : kiStatus.ok ? "Lokal, Namen und Kontaktdaten werden vorher ersetzt" : kiStatus.fehler}>
+            {kiLaeuft ? "KI wertet aus …" : "Mit KI auswerten"} <span className="k">Alt+K</span>
+          </button>
+          <span className="lab">
+            {!kiStatus ? "" : !kiStatus.aktiv ? "KI aus – regelbasierte Erkennung" : kiStatus.ok ? "KI lokal bereit" : `KI: ${kiStatus.fehler}`}
+            {ki && !kiAktuell ? " · Text geändert – KI erneut auswerten" : ""}
+          </span>
+          <div style={{ flex: 1 }} />
+          <span className="lab">Strg+Enter = Akte anlegen</span>
+        </div>
         {offen.length > 0 && (
           <div>
             <div className="th" style={{ color: "#B5620A" }}>Fehlt noch – am besten jetzt am Telefon fragen</div>
@@ -96,6 +127,8 @@ export default function Fallaufnahme() {
           {FELDER.map(({ k, l }) => {
             const vonHand = manuell[k] !== undefined;
             const v = werte[k];
+            const vonKi = !vonHand && !!kiAktuell?.werte[k] && v === kiAktuell.werte[k];
+            const beleg = vonKi ? kiAktuell!.belege[k] : "";
             return (
               <label key={k} style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 8, alignItems: "center", padding: "4px 0", borderBottom: "1px solid var(--line2)" }}>
                 <span className="lab">{l}</span>
@@ -104,14 +137,14 @@ export default function Fallaufnahme() {
                   value={v}
                   placeholder="–"
                   onChange={(e) => setManuell({ ...manuell, [k]: e.target.value })}
-                  style={{ border: "1px solid transparent", background: v && !vonHand ? "var(--hl)" : "transparent", padding: "3px 6px" }}
-                  title={vonHand ? "von Hand geändert" : v ? "automatisch erkannt" : ""}
+                  style={{ border: "1px solid transparent", borderLeft: vonKi ? "2px solid var(--akzent)" : "1px solid transparent", background: v && !vonHand ? "var(--hl)" : "transparent", padding: "3px 6px" }}
+                  title={vonHand ? "von Hand geändert" : vonKi ? `KI · woher: „${beleg || "kein Beleg"}“` : v ? "regelbasiert erkannt" : ""}
                 />
               </label>
             );
           })}
         </div>
-        <div className="lab">Gelb = automatisch erkannt · Feld anklicken zum Korrigieren</div>
+        <div className="lab">Gelb = automatisch erkannt · Strich links = KI (Maus drauf: woher?) · Feld anklicken zum Korrigieren</div>
         {werte.mandant && (
           <div>
             <div className="th">Wird nach dem Anlegen vorgeschlagen</div>

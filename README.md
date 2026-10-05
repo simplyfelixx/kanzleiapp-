@@ -25,6 +25,17 @@ Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr �
 - `src/middleware.ts` schützt alle Seiten und APIs; der Verlauf trägt das Kürzel des angemeldeten Benutzers.
 - Bei `next start` ohne HTTPS (nur lokal) `AUTH_HTTP=1` setzen, sonst wird das Cookie nicht gesendet.
 
+## KI (lokal, Ollama)
+
+1. [Ollama](https://ollama.com) installieren, dann `ollama pull qwen2.5:7b` (ab 16 GB RAM besser `qwen2.5:14b`).
+2. In der App unter **Einstellungen → KI (lokal)** einschalten.
+
+- Nur Adressen im lokalen Netz sind erlaubt, es gehen keine Daten ins Internet.
+- Vor jeder Anfrage werden Namen, Telefon, E-Mail, IBAN, Kennzeichen und Adressen durch Platzhalter ersetzt (`src/lib/anonym.ts`) und danach wieder eingesetzt.
+- **Fallaufnahme:** „Mit KI auswerten“ (Alt+K). KI-Werte haben einen Strich links, beim Überfahren erscheint die Belegstelle („woher?“).
+- **Eingang:** Die KI bestimmt Typ, Absender und eine Kurz-Zusammenfassung. Beträge und Fristen bleiben regelbasiert.
+- Ohne KI oder bei Fehlern läuft weiter die regelbasierte Erkennung.
+
 ## Bedienung
 
 | Taste | Aktion |
