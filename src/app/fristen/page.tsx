@@ -53,7 +53,7 @@ export default function Fristen() {
       <div className="head">
         <div>
           <h1>Fristen &amp; Wiedervorlagen</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>{sicht.filter((f) => f.art === "frist").length} Fristen · {sicht.filter((f) => f.art === "wv").length} Wiedervorlagen · Fristen von der KI gelten erst nach Bestätigung</div>
+          <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>{sicht.filter((f) => f.art === "frist").length} Fristen · {sicht.filter((f) => f.art === "wv").length} Wiedervorlagen · Fristen von der KI gelten erst nach Bestätigung</div>
         </div>
         <span className={"chip" + (nurMeine ? " on" : "")} onClick={() => setNurMeine(!nurMeine)}>Nur meine</span>
         <div style={{ flex: 1 }} />
@@ -75,7 +75,7 @@ export default function Fristen() {
           const tag = iso(d), items = sicht.filter((f) => f.bestaetigt && (i === 0 ? f.datum <= tag : f.datum === tag));
           const we = d.getDay() === 0 || d.getDay() === 6;
           return (
-            <div key={tag} style={{ borderRight: "1px solid #e6e8eb", padding: 6, fontSize: 11, minHeight: 64, background: i === 0 ? "var(--sel)" : undefined, color: we ? "var(--grau)" : undefined }}>
+            <div key={tag} style={{ borderRight: "1px solid #e6e8eb", padding: 6, fontSize: 12.5, minHeight: 64, background: i === 0 ? "var(--sel)" : undefined, color: we ? "var(--grau)" : undefined }}>
               <b>{WT[d.getDay()]} {de(tag).slice(0, 6)}</b>
               {items.slice(0, 3).map((f) => (
                 <div key={f.id} title={f.titel} style={{ marginTop: 3, padding: "1px 4px", borderRadius: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: f.art === "frist" ? "#f8d9d4" : "#e6e8eb", color: f.art === "frist" ? "#8a2416" : undefined }}>
@@ -94,9 +94,9 @@ export default function Fristen() {
             {rows.map((f) => (
               <div key={f.id} className="row" style={{ gridTemplateColumns: "4px 90px 60px 90px 1fr 70px 300px", padding: "9px 0", cursor: "default", background: !f.bestaetigt ? "#fffbea" : undefined }}>
                 <span style={{ alignSelf: "stretch", background: farbe }} />
-                <input className="feld mono" type="date" value={f.datum} onChange={(e) => aktion(f, "datum", { datum: e.target.value })} style={{ padding: "2px 4px", fontSize: 12, border: "1px solid transparent" }} />
+                <input className="feld mono" type="date" value={f.datum} onChange={(e) => aktion(f, "datum", { datum: e.target.value })} style={{ padding: "2px 4px", fontSize: 13.5, border: "1px solid transparent" }} />
                 <span className="k" style={{ justifySelf: "start", color: f.art === "frist" ? "var(--rot)" : undefined }}>{f.art === "frist" ? "FRIST" : "WV"}</span>
-                <Link href={`/akte/${encodeURIComponent(f.akte_id)}`} className="mono" style={{ fontSize: 12 }}>{f.akte_id}</Link>
+                <Link href={`/akte/${encodeURIComponent(f.akte_id)}`} className="mono" style={{ fontSize: 13.5 }}>{f.akte_id}</Link>
                 <span><b style={{ fontWeight: 500 }}>{f.akte_titel}</b> – {f.titel}{!f.bestaetigt && f.quelle && <span className="lab"> · Quelle: {f.quelle}</span>}</span>
                 <span className="lab">{f.wer || "–"}</span>
                 <span style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>

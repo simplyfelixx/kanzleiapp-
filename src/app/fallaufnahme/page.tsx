@@ -105,8 +105,8 @@ export default function Fallaufnahme() {
       <div style={{ flex: 1, minWidth: 0, padding: "18px 28px", display: "flex", flexDirection: "column", gap: 14, borderRight: "1px solid var(--line)", overflow: "auto" }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
           <div>
-            <h1 style={{ fontSize: 22, margin: 0 }}>Fallaufnahme</h1>
-            <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Einfach schreiben oder einfügen – erkannte Angaben erscheinen rechts.</div>
+            <h1 style={{ fontSize: 23, margin: 0 }}>Fallaufnahme</h1>
+            <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Einfach schreiben oder einfügen – erkannte Angaben erscheinen rechts.</div>
           </div>
           <div style={{ flex: 1 }} />
           <select className="feld" value={gebiet} onChange={(e) => setGebiet(e.target.value)}>
@@ -120,7 +120,7 @@ export default function Fallaufnahme() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="z. B. „Herr Müller ruft an, 0172 …, gestern Unfall auf der Weserstraße, Gegner versichert bei der HUK …“"
-          style={{ flex: 1, minHeight: 260, fontSize: 15, lineHeight: 1.7, padding: "14px 16px", resize: "none" }}
+          style={{ flex: 1, minHeight: 260, fontSize: 16.5, lineHeight: 1.7, padding: "14px 16px", resize: "none" }}
         />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {kiLaeuft ? (
@@ -140,7 +140,7 @@ export default function Fallaufnahme() {
         </div>
         {kiFortschritt && (
           <div>
-            <div style={{ display: "flex", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
+            <div style={{ display: "flex", fontSize: 13.5, color: "var(--muted)", marginBottom: 4 }}>
               <span>{kiFortschritt.text}</span><div style={{ flex: 1 }} /><span className="mono">{kiFortschritt.sek} s</span>
             </div>
             <div style={{ height: 3, background: "var(--line2)", borderRadius: 2, overflow: "hidden" }}>
@@ -158,7 +158,7 @@ export default function Fallaufnahme() {
             <div className="th" style={{ color: "#B5620A" }}>Fehlt noch – am besten jetzt am Telefon fragen</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
               {offen.slice(0, 6).map((f) => (
-                <div key={f.feld} style={{ display: "flex", gap: 10, alignItems: "center", padding: "7px 10px", border: "1px solid #e8c49a", background: "#fdf6ee", borderRadius: 4, fontSize: 13 }}>
+                <div key={f.feld} style={{ display: "flex", gap: 10, alignItems: "center", padding: "7px 10px", border: "1px solid #e8c49a", background: "#fdf6ee", borderRadius: 4, fontSize: 14.5 }}>
                   <span style={{ color: "#B5620A", fontWeight: 600 }}>?</span><span style={{ flex: 1 }}>{f.frage}</span><span className="lab">{f.grund}</span>
                 </div>
               ))}
@@ -172,7 +172,7 @@ export default function Fallaufnahme() {
           <span className="th" style={{ color: "var(--akzent)" }}>Neue Akte · Vorschau</span>
           <div style={{ flex: 1 }} /><span className="k">{gebiet}</span>
         </div>
-        <div style={{ fontSize: 14, lineHeight: 1.5, borderLeft: "2px solid var(--akzent)", paddingLeft: 10, color: worum ? undefined : "var(--muted)" }}>
+        <div style={{ fontSize: 15.5, lineHeight: 1.5, borderLeft: "2px solid var(--akzent)", paddingLeft: 10, color: worum ? undefined : "var(--muted)" }}>
           {worum || "Hier erscheint eine kurze Zusammenfassung des Falls."}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 16 }}>
@@ -200,7 +200,7 @@ export default function Fallaufnahme() {
         {werte.mandant && (
           <div>
             <div className="th">Wird nach dem Anlegen vorgeschlagen</div>
-            <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+            <div style={{ fontSize: 14.5, display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
               <div>✓ Vollmacht + Fragebogen an Mandant</div>
               {werte.rsv.startsWith("ja") && <div>✓ Deckungsanfrage {werte.rsv.replace("ja · ", "")}</div>}
               {werte.versicherung && <div>✓ Schadensmeldung an {werte.versicherung}</div>}
@@ -211,8 +211,8 @@ export default function Fallaufnahme() {
         )}
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 6 }}>
-          <button className="btn pri" style={{ padding: "9px 18px", fontSize: 13 }} disabled={laeuft} onClick={anlegen}>Akte anlegen ↵</button>
-          <button className="btn" style={{ padding: "9px 14px", fontSize: 13 }} onClick={() => { setText(""); setManuell({}); }}>Verwerfen</button>
+          <button className="btn pri" style={{ padding: "9px 18px", fontSize: 14.5 }} disabled={laeuft} onClick={anlegen}>Akte anlegen ↵</button>
+          <button className="btn" style={{ padding: "9px 14px", fontSize: 14.5 }} onClick={() => { setText(""); setManuell({}); }}>Verwerfen</button>
         </div>
       </div>
     </div>

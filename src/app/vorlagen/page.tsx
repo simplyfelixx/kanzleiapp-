@@ -53,7 +53,7 @@ export default function Vorlagen() {
       <div className="head">
         <div>
           <h1>Vorlagen &amp; Textbausteine</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Platzhalter wie <code>{"{{mandant.name}}"}</code> werden aus der Akte befüllt. Briefkopf und Logo kommen aus den Einstellungen.</div>
+          <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Platzhalter wie <code>{"{{mandant.name}}"}</code> werden aus der Akte befüllt. Briefkopf und Logo kommen aus den Einstellungen.</div>
         </div>
         <div style={{ flex: 1 }} />
         <button className="btn pri" onClick={neu}>+ Neue Vorlage</button>
@@ -78,9 +78,9 @@ export default function Vorlagen() {
             </div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               <span className="lab" style={{ marginRight: 4 }}>Platzhalter einfügen:</span>
-              {platzhalter.map((p) => <span key={p} className="chip" style={{ padding: "1px 6px", fontSize: 11 }} onClick={() => einfuegen(p)}>{p}</span>)}
+              {platzhalter.map((p) => <span key={p} className="chip" style={{ padding: "1px 6px", fontSize: 12.5 }} onClick={() => einfuegen(p)}>{p}</span>)}
             </div>
-            <textarea ref={ta} className="feld" style={{ width: "100%", minHeight: 360, fontSize: 13.5, lineHeight: 1.6, fontFamily: "Georgia, serif", padding: 14 }} value={v.text} onChange={(e) => setV({ ...v, text: e.target.value })} />
+            <textarea ref={ta} className="feld" style={{ width: "100%", minHeight: 360, fontSize: 15, lineHeight: 1.6, fontFamily: "Georgia, serif", padding: 14 }} value={v.text} onChange={(e) => setV({ ...v, text: e.target.value })} />
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button className="btn pri" onClick={speichern}>Speichern</button>
               <span className="lab">Testen mit</span>
@@ -91,8 +91,8 @@ export default function Vorlagen() {
             </div>
             {vorschau && (
               <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: 16, background: "var(--bg3)" }}>
-                {vorschau.fehlend.length > 0 && <div style={{ color: "#8a2416", fontSize: 13, marginBottom: 8 }}>In dieser Akte fehlen: {vorschau.fehlend.join(", ")}</div>}
-                <div style={{ whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 13, lineHeight: 1.6 }}>
+                {vorschau.fehlend.length > 0 && <div style={{ color: "#8a2416", fontSize: 14.5, marginBottom: 8 }}>In dieser Akte fehlen: {vorschau.fehlend.join(", ")}</div>}
+                <div style={{ whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 14.5, lineHeight: 1.6 }}>
                   {vorschau.text.split(/(\[\[[\w.]+\]\])/).map((t, i) => /^\[\[/.test(t) ? <mark key={i} style={{ background: "#fde3d4", color: "#8a2416" }}>{t}</mark> : t)}
                 </div>
               </div>

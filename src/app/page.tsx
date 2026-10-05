@@ -64,13 +64,13 @@ export default function MeinTag() {
       <div className="head">
         <div>
           <h1>Mein Tag</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>{liste.length} offen · ↑ ↓ wählen · Enter bestätigen bzw. erledigen</div>
+          <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>{liste.length} offen · ↑ ↓ wählen · Enter bestätigen bzw. erledigen</div>
         </div>
-        <div style={{ display: "flex", gap: 24, fontSize: 13 }}>
-          <div><span className="mono" style={{ fontSize: 20, color: "var(--rot)" }}>{zaehle("heute")}</span> heute</div>
-          <div><span className="mono" style={{ fontSize: 20, color: "#B5620A" }}>{zaehle("woche")}</span> diese Woche</div>
-          <div><span className="mono" style={{ fontSize: 20 }}>{zaehle("pruefen")}</span> zu prüfen</div>
-          <div><span className="mono" style={{ fontSize: 20, color: "var(--gruen)" }}>{daten.erledigt}</span> heute erledigt</div>
+        <div style={{ display: "flex", gap: 24, fontSize: 14.5 }}>
+          <div><span className="mono" style={{ fontSize: 21, color: "var(--rot)" }}>{zaehle("heute")}</span> heute</div>
+          <div><span className="mono" style={{ fontSize: 21, color: "#B5620A" }}>{zaehle("woche")}</span> diese Woche</div>
+          <div><span className="mono" style={{ fontSize: 21 }}>{zaehle("pruefen")}</span> zu prüfen</div>
+          <div><span className="mono" style={{ fontSize: 21, color: "var(--gruen)" }}>{daten.erledigt}</span> heute erledigt</div>
         </div>
       </div>
       <div className="main">
@@ -79,7 +79,7 @@ export default function MeinTag() {
           {liste.map((x, i) => (
             <div key={x.key} className={"row" + (i === idx ? " sel" : "")} style={{ gridTemplateColumns: "4px 80px 70px 230px 1fr", padding: "11px 20px 11px 0" }} onClick={() => setIdx(i)}>
               <span style={{ alignSelf: "stretch", background: prioFarbe[x.prio] }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: prioFarbe[x.prio] }}>{prioLabel[x.prio]}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: prioFarbe[x.prio] }}>{prioLabel[x.prio]}</span>
               <span className="k" style={{ justifySelf: "start" }}>{x.typ === "v" ? "Vorgang" : x.f.art === "frist" ? "Frist" : "WV"}</span>
               <span><span className="mono lab">{x.typ === "v" ? x.v.akte_id : x.f.akte_id}</span> <b style={{ fontWeight: 500 }}>{x.typ === "v" ? x.v.akte_titel : x.f.akte_titel}</b></span>
               <span>{x.typ === "v" ? x.v.titel : `${x.f.titel} · ${datumDE(x.f.datum)}`}</span>
@@ -95,7 +95,7 @@ export default function MeinTag() {
             </div>
             {e.typ === "v" ? (
               <>
-                <div style={{ fontSize: 14, lineHeight: 1.5 }}>{e.v.zusammenfassung}</div>
+                <div style={{ fontSize: 15.5, lineHeight: 1.5 }}>{e.v.zusammenfassung}</div>
                 <div>
                   {(JSON.parse(e.v.felder || "[]") as Feld[]).map((f) => (
                     <div className="fr" key={f.label}>
@@ -107,20 +107,20 @@ export default function MeinTag() {
                 </div>
                 {e.v.entwurf !== null && <textarea className="draft" value={entwurf} onChange={(ev) => setEntwurf(ev.target.value)} />}
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn pri" style={{ padding: "8px 16px", fontSize: 13 }} onClick={() => vorgang("bestaetigen")}>{e.v.aktion} ↵</button>
-                  <button className="btn" style={{ padding: "8px 14px", fontSize: 13 }} onClick={() => vorgang("verwerfen")}>Verwerfen</button>
+                  <button className="btn pri" style={{ padding: "8px 16px", fontSize: 14.5 }} onClick={() => vorgang("bestaetigen")}>{e.v.aktion} ↵</button>
+                  <button className="btn" style={{ padding: "8px 14px", fontSize: 14.5 }} onClick={() => vorgang("verwerfen")}>Verwerfen</button>
                 </div>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 15, fontWeight: 500 }}>{e.f.titel}</div>
+                <div style={{ fontSize: 16.5, fontWeight: 500 }}>{e.f.titel}</div>
                 <div className="fr"><span className="lab">Fällig</span><span className="mono" style={{ color: e.f.datum <= daten.heute ? "var(--rot)" : undefined }}>{datumDE(e.f.datum)}{e.f.datum < daten.heute && " · überfällig"}</span><span /></div>
                 <div className="fr"><span className="lab">Zuständig</span><span>{e.f.wer || "–"}</span><span /></div>
-                {!e.f.bestaetigt && <div style={{ fontSize: 13, color: "#8a6d00", background: "#fffbea", padding: "8px 10px", borderRadius: 4 }}>Von der KI erkannt ({e.f.quelle}). Gilt erst nach Bestätigung.</div>}
+                {!e.f.bestaetigt && <div style={{ fontSize: 14.5, color: "#8a6d00", background: "#fffbea", padding: "8px 10px", borderRadius: 4 }}>Von der KI erkannt ({e.f.quelle}). Gilt erst nach Bestätigung.</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {e.f.bestaetigt
-                    ? <button className="btn pri" style={{ padding: "8px 16px", fontSize: 13 }} onClick={() => frist("erledigt")}>Erledigt ↵</button>
-                    : <button className="btn pri" style={{ padding: "8px 16px", fontSize: 13 }} onClick={() => frist("bestaetigen")}>Frist bestätigen ↵</button>}
+                    ? <button className="btn pri" style={{ padding: "8px 16px", fontSize: 14.5 }} onClick={() => frist("erledigt")}>Erledigt ↵</button>
+                    : <button className="btn pri" style={{ padding: "8px 16px", fontSize: 14.5 }} onClick={() => frist("bestaetigen")}>Frist bestätigen ↵</button>}
                   <button className="btn" onClick={() => frist("verschieben", 1)}>+1 Tag</button>
                   <button className="btn" onClick={() => frist("verschieben", 7)}>+7 Tage</button>
                   <button className="btn" onClick={() => frist("verschieben", 14)}>+14 Tage</button>

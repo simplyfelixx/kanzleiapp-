@@ -28,10 +28,10 @@ export default function Benutzer() {
     if (pw) aendern(u.id, { passwort: pw }, "Passwort geändert");
   };
 
-  const td: React.CSSProperties = { padding: "6px 8px", borderBottom: "1px solid #eceef0", fontSize: 13 };
+  const td: React.CSSProperties = { padding: "6px 8px", borderBottom: "1px solid #eceef0", fontSize: 14.5 };
   return (
     <div className="main" style={{ padding: 20 }}>
-      <div className="head"><div><h1>Benutzer</h1><div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Konten und Rollen · nur für Admins</div></div></div>
+      <div className="head"><div><h1>Benutzer</h1><div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Konten und Rollen · nur für Admins</div></div></div>
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
         <thead><tr>{["Name", "Kürzel", "Benutzername", "Rolle", "Letzter Login", "Status", ""].map((h) => <th key={h} className="th" style={{ ...td, textAlign: "left" }}>{h}</th>)}</tr></thead>
         <tbody>

@@ -76,7 +76,7 @@ export default function AktePage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <Link href="/akten" className="lab" style={{ textDecoration: "none" }}>← Akten</Link>
           <span className="dot" style={{ background: prioFarbe[akte.prioritaet as Prioritaet] ?? "var(--grau)" }} />
-          <Inline value={akte.titel} onSave={(v) => speichern({ art: "akte", titel: v })} style={{ fontSize: 19, fontWeight: 600 }} />
+          <Inline value={akte.titel} onSave={(v) => speichern({ art: "akte", titel: v })} style={{ fontSize: 20, fontWeight: 600 }} />
           <span className="k">{akte.gebiet}</span>
           <span className="lab mono">Az. {akte.id}</span>
           <div style={{ flex: 1 }} />
@@ -95,11 +95,11 @@ export default function AktePage() {
             <div key={b.id} style={{ padding: "10px 14px", borderRight: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: b.rolle === "Versicherung" ? "var(--akzent-bg)" : undefined }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span className="lab">{b.rolle}{b.ansprechpartner && ` · ${b.ansprechpartner}`}</span>
-                <button className="btn" style={{ padding: "1px 7px", fontSize: 11 }} onClick={() => setPanel(b)}>Bearbeiten</button>
+                <button className="btn" style={{ padding: "1px 7px", fontSize: 12.5 }} onClick={() => setPanel(b)}>Bearbeiten</button>
               </div>
               <div style={{ fontWeight: 500 }}>{b.name || "–"}</div>
-              {b.telefon && <div className="mono" style={{ fontSize: 13, fontWeight: b.rolle === "Versicherung" ? 600 : 400 }}>{b.telefon} <a href={`tel:${b.telefon.replace(/[^\d+]/g, "")}`} style={{ fontSize: 11 }}>anrufen</a></div>}
-              {b.zeichen && <div className="mono" style={{ fontSize: 12 }}>{b.rolle === "Versicherung" ? "Schaden-Nr. " : ""}{b.zeichen} <a href="#" style={{ fontSize: 11 }} onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(b.zeichen); zeige("Kopiert"); }}>kopieren</a></div>}
+              {b.telefon && <div className="mono" style={{ fontSize: 14.5, fontWeight: b.rolle === "Versicherung" ? 600 : 400 }}>{b.telefon} <a href={`tel:${b.telefon.replace(/[^\d+]/g, "")}`} style={{ fontSize: 12.5 }}>anrufen</a></div>}
+              {b.zeichen && <div className="mono" style={{ fontSize: 13.5 }}>{b.rolle === "Versicherung" ? "Schaden-Nr. " : ""}{b.zeichen} <a href="#" style={{ fontSize: 12.5 }} onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(b.zeichen); zeige("Kopiert"); }}>kopieren</a></div>}
             </div>
           ))}
           <div style={{ padding: "10px 14px", display: "flex", alignItems: "center" }}>
@@ -150,7 +150,7 @@ export default function AktePage() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span className="th">Fall</span>
-              <button className="btn" style={{ padding: "1px 7px", fontSize: 11 }} onClick={() => setFallEdit({ ...fall })}>Bearbeiten</button>
+              <button className="btn" style={{ padding: "1px 7px", fontSize: 12.5 }} onClick={() => setFallEdit({ ...fall })}>Bearbeiten</button>
             </div>
             {FALLFELDER.map(([k, l]) => (
               <div className="fr" key={k} style={{ gridTemplateColumns: "150px 1fr" }}>
@@ -169,7 +169,7 @@ export default function AktePage() {
             {d.fristen.length === 0 && <div className="lab" style={{ padding: "8px 0" }}>Keine offenen Fristen oder Wiedervorlagen.</div>}
             {d.fristen.map((f) => (
               <div key={f.id} className="fr" style={{ gridTemplateColumns: "80px 50px 1fr auto", background: f.bestaetigt ? undefined : "#fffbea" }}>
-                <span className="mono" style={{ fontSize: 12 }}>{de(f.datum)}</span>
+                <span className="mono" style={{ fontSize: 13.5 }}>{de(f.datum)}</span>
                 <span className="k" style={{ color: f.art === "frist" ? "var(--rot)" : undefined, justifySelf: "start" }}>{f.art === "frist" ? "Frist" : "WV"}</span>
                 <span>{f.titel}{!f.bestaetigt && <span className="lab"> · von KI erkannt</span>}</span>
                 <span style={{ display: "flex", gap: 4 }}>
@@ -190,8 +190,8 @@ export default function AktePage() {
             <div className="th">Verlauf</div>
             {d.verlauf.length === 0 && <div className="lab" style={{ padding: "8px 0" }}>Noch keine Einträge.</div>}
             {d.verlauf.map((v) => (
-              <div key={v.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 8, padding: "5px 0", fontSize: 13, borderBottom: "1px solid var(--line2)" }}>
-                <span className="mono lab" style={{ fontSize: 12 }}>{de(v.zeit)}</span>
+              <div key={v.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 8, padding: "5px 0", fontSize: 14.5, borderBottom: "1px solid var(--line2)" }}>
+                <span className="mono lab" style={{ fontSize: 13.5 }}>{de(v.zeit)}</span>
                 <span>{v.text}{v.wer && <span className="lab"> · {v.wer}</span>}</span>
               </div>
             ))}
@@ -209,7 +209,7 @@ export default function AktePage() {
             <Feld key={k} label={l}><input className="feld" style={{ width: "100%" }} value={String(panel[k] ?? "")} onChange={(e) => setPanel({ ...panel, [k]: e.target.value })} /></Feld>
           ))}
           {panel.rolle === "Mandant" && (
-            <Feld label="Vorsteuerabzug"><label style={{ fontSize: 13 }}><input type="checkbox" checked={!!panel.vorsteuer} onChange={(e) => setPanel({ ...panel, vorsteuer: e.target.checked ? 1 : 0 })} /> berechtigt (netto abrechnen)</label></Feld>
+            <Feld label="Vorsteuerabzug"><label style={{ fontSize: 14.5 }}><input type="checkbox" checked={!!panel.vorsteuer} onChange={(e) => setPanel({ ...panel, vorsteuer: e.target.checked ? 1 : 0 })} /> berechtigt (netto abrechnen)</label></Feld>
           )}
           <Feld label="Notiz"><textarea className="feld" style={{ width: "100%", minHeight: 60 }} value={panel.notiz ?? ""} onChange={(e) => setPanel({ ...panel, notiz: e.target.value })} /></Feld>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -247,7 +247,7 @@ function Seitenfenster({ titel, onClose, children }: { titel: string; onClose: (
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(22,25,29,.25)", zIndex: 40 }} />
       <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 480, background: "#fff", borderLeft: "1px solid #c9ccd1", boxShadow: "-8px 0 24px rgba(0,0,0,.1)", zIndex: 41, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center" }}>
-          <span style={{ fontSize: 17, fontWeight: 600 }}>{titel}</span><div style={{ flex: 1 }} /><span className="k">Esc</span>
+          <span style={{ fontSize: 18, fontWeight: 600 }}>{titel}</span><div style={{ flex: 1 }} /><span className="k">Esc</span>
         </div>
         <div style={{ flex: 1, overflow: "auto", padding: "12px 20px" }}>{children}</div>
       </div>
@@ -266,7 +266,7 @@ function Inline({ value, onSave, multiline, platzhalter, style }: { value: strin
   useEffect(() => setV(value), [value]);
   const fertig = () => { setEdit(false); if (v !== value) onSave(v); };
   if (!edit)
-    return <span onClick={() => setEdit(true)} title="Klicken zum Bearbeiten" style={{ cursor: "text", display: multiline ? "block" : "inline", minHeight: 18, lineHeight: 1.45, fontSize: 13, color: value ? undefined : "var(--muted)", ...style }}>{value || platzhalter || "–"}</span>;
+    return <span onClick={() => setEdit(true)} title="Klicken zum Bearbeiten" style={{ cursor: "text", display: multiline ? "block" : "inline", minHeight: 18, lineHeight: 1.45, fontSize: 14.5, color: value ? undefined : "var(--muted)", ...style }}>{value || platzhalter || "–"}</span>;
   const props = {
     autoFocus: true, value: v, className: "feld", onBlur: fertig,
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV(e.target.value),
@@ -319,7 +319,7 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
         <label className="btn" style={{ cursor: "pointer" }}>+ Datei<input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt" style={{ display: "none" }} onChange={(e) => e.target.files && hochladen(e.target.files)} /></label>
       </div>
       {auswahl.size > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", marginTop: 6, background: "var(--akzent-bg)", borderRadius: 4, fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", marginTop: 6, background: "var(--akzent-bg)", borderRadius: 4, fontSize: 13.5 }}>
           <b>{auswahl.size} ausgewählt</b>
           <select className="feld" value={schemaTyp} onChange={(e) => setSchemaTyp(e.target.value)}><option value="">Typ beibehalten</option>{DOKTYPEN.map((t) => <option key={t}>{t}</option>)}</select>
           <button className="btn pri" onClick={sammel}>Nach Schema umbenennen</button>
@@ -332,10 +332,10 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
         {sortiert.map((x, i) => (
           <div key={x.id}>
             {gruppe(x) && gruppe(x) !== gruppe(sortiert[i - 1] ?? ({} as DokumentRow)) && <div className="lab" style={{ padding: "8px 0 2px", fontWeight: 600 }}>{gruppe(x)}</div>}
-            <div style={{ display: "grid", gridTemplateColumns: "16px 18px 80px 1fr 170px 130px", gap: 8, alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--line2)", fontSize: 13 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "16px 18px 80px 1fr 170px 130px", gap: 8, alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--line2)", fontSize: 14.5 }}>
               <span className={"cb" + (auswahl.has(x.id) ? " on" : "")} onClick={() => toggle(x.id)}>{auswahl.has(x.id) ? "✓" : ""}</span>
               <span title={x.richtung === "ein" ? "eingegangen" : "ausgegangen"} style={{ fontWeight: 600, color: x.richtung === "ein" ? "var(--gruen)" : "var(--akzent)" }}>{x.richtung === "ein" ? "↓" : "↑"}</span>
-              <span className="mono lab" style={{ fontSize: 12 }}>{x.datum.split("-").reverse().join(".")}</span>
+              <span className="mono lab" style={{ fontSize: 13.5 }}>{x.datum.split("-").reverse().join(".")}</span>
               {umbenennen?.id === x.id
                 ? <input autoFocus className="feld" value={umbenennen.name} onChange={(e) => setUmbenennen({ id: x.id, name: e.target.value })}
                     onKeyDown={(e) => { if (e.key === "Enter") { speichern(x.id, { name: umbenennen.name }); setUmbenennen(null); } if (e.key === "Escape") setUmbenennen(null); }}
@@ -344,10 +344,10 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
                     {x.datei ? <a href={`/api/dokumente/${x.id}`} target="_blank" rel="noreferrer" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</a> : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</span>}
                     <a href="#" className="lab" onClick={(e) => { e.preventDefault(); setUmbenennen({ id: x.id, name: x.name }); }}>✎</a>
                   </span>}
-              <select className="feld" style={{ padding: "2px 4px", fontSize: 12 }} value={x.typ} onChange={(e) => speichern(x.id, { typ: e.target.value })}>
+              <select className="feld" style={{ padding: "2px 4px", fontSize: 13.5 }} value={x.typ} onChange={(e) => speichern(x.id, { typ: e.target.value })}>
                 {[...new Set([x.typ, ...DOKTYPEN])].map((t) => <option key={t}>{t}</option>)}
               </select>
-              <span className="lab" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.absender}</span>
+              <span className="lab" style={{ fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.absender}</span>
             </div>
           </div>
         ))}

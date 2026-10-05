@@ -59,7 +59,7 @@ export default function TopBar() {
   // Mandantenportal und Ersteinrichtung haben keine Kanzlei-Leiste
   if (path.startsWith("/mandantenportal") || path.startsWith("/einrichtung")) {
     return (
-      <div style={{ padding: "6px 12px", fontSize: 12, background: "#16191d", color: "#fff", display: "flex", gap: 12 }}>
+      <div style={{ padding: "6px 12px", fontSize: 13.5, background: "#16191d", color: "#fff", display: "flex", gap: 12 }}>
         <span>Vorschau</span><Link href="/" style={{ color: "#c9d3ea" }}>← zurück zur Kanzlei-Ansicht</Link>
       </div>
     );
@@ -95,7 +95,7 @@ export default function TopBar() {
         </span>
       </nav>
       <div style={{ flex: 1 }} />
-      <Link href="/fallaufnahme" style={{ fontSize: 12, textDecoration: "none", border: "1px dashed #b9bec4", borderRadius: 4, padding: "5px 10px", color: "#16191d" }}>+ Fallaufnahme <span className="k">F3</span></Link>
+      <Link href="/fallaufnahme" style={{ fontSize: 13.5, textDecoration: "none", border: "1px dashed #b9bec4", borderRadius: 4, padding: "5px 10px", color: "#16191d" }}>+ Fallaufnahme <span className="k">F3</span></Link>
       <div className="search" style={{ width: 220 }}><span>Suchen …</span><span className="k">F2</span></div>
       <div className="avatar" title={ich ? `${ich.name} · ${ich.rolle} – klicken zum Abmelden` : ""} onClick={abmelden} style={{ cursor: "pointer" }}>{ich?.kuerzel ?? "…"}</div>
     </div>

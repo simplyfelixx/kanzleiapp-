@@ -40,7 +40,7 @@ export default function Akten() {
       <div className="head">
         <div>
           <h1>Akten</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>{liste.length} Akten · sortiert nach Priorität</div>
+          <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>{liste.length} Akten · sortiert nach Priorität</div>
         </div>
         <input autoFocus placeholder="Suchen: Name, Az., Versicherung …" value={suche} onChange={(e) => setSuche(e.target.value)} className="feld" style={{ width: 320 }} />
         <div style={{ flex: 1 }} />
@@ -69,7 +69,7 @@ export default function Akten() {
             <span style={{ fontWeight: 500 }}>{a.titel} <span className="k">{a.gebiet}</span></span>
             <span>{a.mandant ?? "–"}</span>
             <span>{a.versicherung ?? "–"}</span>
-            <span className="lab" style={{ fontSize: 13 }}>{a.phase}</span>
+            <span className="lab" style={{ fontSize: 14.5 }}>{a.phase}</span>
             <span className="num" style={{ color: a.offen > 0 ? "var(--rot)" : undefined }}>{euro(a.offen)}</span>
           </div>
         ))}

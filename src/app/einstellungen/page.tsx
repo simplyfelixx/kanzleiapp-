@@ -71,7 +71,7 @@ export default function Einstellungen() {
   return (
     <>
       <div className="head">
-        <div><h1>Einstellungen</h1><div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Kanzlei &amp; Briefkopf – gilt für alle Schreiben, später auch Rechnungen und Mandantenportal</div></div>
+        <div><h1>Einstellungen</h1><div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Kanzlei &amp; Briefkopf – gilt für alle Schreiben, später auch Rechnungen und Mandantenportal</div></div>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: "20px 28px", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 28, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -102,9 +102,9 @@ export default function Einstellungen() {
         {/* Live-Vorschau Briefkopf */}
         <div>
           <div className="th" style={{ marginBottom: 8 }}>Vorschau</div>
-          <div style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)", padding: "34px 40px", aspectRatio: "1 / 1.414", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 11, position: "relative" }}>
+          <div style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)", padding: "34px 40px", aspectRatio: "1 / 1.414", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 12.5, position: "relative" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div><div style={{ color: k.akzent, fontWeight: 700, fontSize: 18 }}>{k.name}</div><div style={{ color: "#666", fontSize: 9 }}>{k.zusatz}</div></div>
+              <div><div style={{ color: k.akzent, fontWeight: 700, fontSize: 19 }}>{k.name}</div><div style={{ color: "#666", fontSize: 9 }}>{k.zusatz}</div></div>
               {k.logo && <img src={`/api/kanzlei/logo?v=${logoV}`} alt="" style={{ maxHeight: 48, maxWidth: 140 }} />}
             </div>
             <div style={{ borderTop: `1px solid ${k.akzent}`, margin: "10px 0 26px" }} />

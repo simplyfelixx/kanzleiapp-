@@ -19,18 +19,18 @@ export default function Protokoll() {
   const feld = (k: keyof typeof f, l: string, w: number, typ = "text") => (
     <label><div className="lab">{l}</div><input className="feld" type={typ} style={{ width: w }} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></label>
   );
-  const td: React.CSSProperties = { padding: "6px 8px", borderBottom: "1px solid #eceef0", fontSize: 13, verticalAlign: "top" };
+  const td: React.CSSProperties = { padding: "6px 8px", borderBottom: "1px solid #eceef0", fontSize: 14.5, verticalAlign: "top" };
 
   return (
     <div className="main" style={{ padding: 20, flexDirection: "column", overflow: "auto" }}>
       <div className="head" style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
         <div>
           <h1>Protokoll</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Wer hat wann was getan · unveränderlich, jede Zeile mit der vorherigen verkettet</div>
+          <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Wer hat wann was getan · unveränderlich, jede Zeile mit der vorherigen verkettet</div>
         </div>
         <div style={{ flex: 1 }} />
         {d && (
-          <span style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: `1px solid ${d.kette.ok ? "#9fd3b0" : "#e3a29a"}`, background: d.kette.ok ? "#eef8f1" : "#fdf0ee", color: d.kette.ok ? "#1d7a43" : "#c0392b" }}>
+          <span style={{ fontSize: 13.5, padding: "4px 10px", borderRadius: 4, border: `1px solid ${d.kette.ok ? "#9fd3b0" : "#e3a29a"}`, background: d.kette.ok ? "#eef8f1" : "#fdf0ee", color: d.kette.ok ? "#1d7a43" : "#c0392b" }}>
             {d.kette.ok ? `✓ Kette intakt · ${d.kette.anzahl} Einträge` : `✗ Kette verletzt bei Eintrag #${d.kette.fehlerBei}`}
           </span>
         )}

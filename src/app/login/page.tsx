@@ -35,14 +35,14 @@ export default function Login() {
   return (
     <div style={{ display: "flex", justifyContent: "center", paddingTop: "12vh" }}>
       <form onSubmit={senden} style={{ width: 340, background: "#fff", border: "1px solid #d5d8dc", borderRadius: 6, padding: 24 }}>
-        <h1 style={{ fontSize: 18, margin: "0 0 4px" }}>{einrichtung ? "Ersten Admin anlegen" : "Anmelden"}</h1>
+        <h1 style={{ fontSize: 19, margin: "0 0 4px" }}>{einrichtung ? "Ersten Admin anlegen" : "Anmelden"}</h1>
         <div className="lab" style={{ marginBottom: 16 }}>{einrichtung ? "Noch kein Benutzer vorhanden. Dieses Konto verwaltet später alle weiteren." : "Kanzlei Nord"}</div>
         {einrichtung && feld("name", "Name")}
         {einrichtung && feld("kuerzel", "Kürzel (z. B. FK)")}
         {feld("login", "Benutzername", "text", "username")}
         {feld("passwort", einrichtung ? "Passwort (mind. 10 Zeichen)" : "Passwort", "password", einrichtung ? "new-password" : "current-password")}
         {einrichtung && feld("passwort2", "Passwort wiederholen", "password", "new-password")}
-        {fehler && <div style={{ color: "#c0392b", fontSize: 13, marginBottom: 10 }}>{fehler}</div>}
+        {fehler && <div style={{ color: "#c0392b", fontSize: 14.5, marginBottom: 10 }}>{fehler}</div>}
         <button className="btn pri" style={{ width: "100%" }} disabled={laeuft}>{laeuft ? "…" : einrichtung ? "Anlegen und anmelden" : "Anmelden"}</button>
       </form>
     </div>

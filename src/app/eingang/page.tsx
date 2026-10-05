@@ -80,23 +80,23 @@ export default function Eingang() {
       <div className="head">
         <div>
           <h1>Eingang</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>{doks.length} neu · {doks.filter((e) => e.sicher).length} sicher zugeordnet · {doks.filter((e) => !e.sicher).length} brauchen dich</div>
+          <div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>{doks.length} neu · {doks.filter((e) => e.sicher).length} sicher zugeordnet · {doks.filter((e) => !e.sicher).length} brauchen dich</div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {filterListe.map((q) => <span key={q} className={"chip" + (filter === q ? " on" : "")} onClick={() => { setFilter(q); setIdx(0); }}>{label[q]}</span>)}
         </div>
       </div>
       <div className="main" onDragOver={(ev) => { ev.preventDefault(); setZiehen(true); }} onDragLeave={() => setZiehen(false)} onDrop={(ev) => { ev.preventDefault(); setZiehen(false); hochladen(ev.dataTransfer.files); }} style={{ position: "relative" }}>
-        {ziehen && <div style={{ position: "absolute", inset: 8, border: "2px dashed var(--akzent)", background: "rgba(31,79,209,.06)", zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "var(--akzent)", pointerEvents: "none" }}>Dateien hier ablegen – sie werden erkannt und zugeordnet</div>}
+        {ziehen && <div style={{ position: "absolute", inset: 8, border: "2px dashed var(--akzent)", background: "rgba(31,79,209,.06)", zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "var(--akzent)", pointerEvents: "none" }}>Dateien hier ablegen – sie werden erkannt und zugeordnet</div>}
         <div style={{ width: 500, borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", overflow: "auto" }}>
           {auswahl.size > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--akzent-bg)", fontSize: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--akzent-bg)", fontSize: 13.5 }}>
               <b>{auswahl.size} ausgewählt</b><div style={{ flex: 1 }} />
               <button className="btn" onClick={() => setAuswahl(new Set())}>Auswahl aufheben</button>
               <button className="btn pri" onClick={sammel}>Alle bestätigen</button>
             </div>
           )}
-          <label style={{ display: "block", margin: "10px 16px", padding: "12px", border: "1px dashed #b9bec4", borderRadius: 4, textAlign: "center", fontSize: 13, cursor: "pointer", color: "var(--muted)" }}>
+          <label style={{ display: "block", margin: "10px 16px", padding: "12px", border: "1px dashed #b9bec4", borderRadius: 4, textAlign: "center", fontSize: 14.5, cursor: "pointer", color: "var(--muted)" }}>
             {laedt ? "Wird gelesen und erkannt …" : <>PDF oder Scan hierher ziehen oder <span style={{ color: "var(--akzent)" }}>Datei wählen</span></>}
             <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.txt" style={{ display: "none" }} onChange={(ev) => ev.target.files && hochladen(ev.target.files)} />
           </label>
@@ -104,14 +104,14 @@ export default function Eingang() {
           {liste.map((e, i) => (
             <div key={e.id} className={"row" + (i === idx ? " sel" : "")} style={{ gridTemplateColumns: "16px 56px 1fr 70px", padding: "11px 16px", alignItems: "start" }} onClick={() => setIdx(i)}>
               <span className={"cb" + (auswahl.has(e.id) ? " on" : "")} onClick={(ev) => { ev.stopPropagation(); toggle(e.id); }}>{auswahl.has(e.id) ? "✓" : ""}</span>
-              <span className="mono" style={{ fontSize: 10, textAlign: "center", border: "1px solid #d5d8dc", borderRadius: 3, color: e.quelle === "beA" ? "var(--akzent)" : "#3a3f47" }}>{e.quelle}</span>
+              <span className="mono" style={{ fontSize: 11.5, textAlign: "center", border: "1px solid #d5d8dc", borderRadius: 3, color: e.quelle === "beA" ? "var(--akzent)" : "#3a3f47" }}>{e.quelle}</span>
               <div>
                 <div style={{ fontWeight: 500 }}>{e.typ}</div>
-                <div className="lab" style={{ fontSize: 12 }}>{e.absender} → {(zuordnung[e.id] ?? e.akte_id) ? <span className="mono">{zuordnung[e.id] ?? e.akte_id}</span> : <span style={{ color: "#B5620A" }}>Akte unklar</span>}</div>
+                <div className="lab" style={{ fontSize: 13.5 }}>{e.absender} → {(zuordnung[e.id] ?? e.akte_id) ? <span className="mono">{zuordnung[e.id] ?? e.akte_id}</span> : <span style={{ color: "#B5620A" }}>Akte unklar</span>}</div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div className="lab mono">{e.zeit}</div>
-                <div style={{ fontSize: 11, color: e.sicher ? "var(--gruen)" : "#B5620A" }}>{e.sicher ? "sicher" : "unklar"}</div>
+                <div style={{ fontSize: 12.5, color: e.sicher ? "var(--gruen)" : "#B5620A" }}>{e.sicher ? "sicher" : "unklar"}</div>
               </div>
             </div>
           ))}
@@ -119,8 +119,8 @@ export default function Eingang() {
         <div style={{ flex: 1, background: "#eceef1", padding: 20, display: "flex", justifyContent: "center", overflow: "auto" }}>
           {d && d.datei && <iframe src={`/api/dokumente/e${d.id}`} title={d.dateiname} style={{ width: "100%", height: "100%", border: 0, background: "#fff" }} />}
           {d && !d.datei && (
-            <div style={{ width: 480, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.12)", padding: "36px 40px", fontSize: 12, lineHeight: 1.7, fontFamily: "Georgia, serif", whiteSpace: "pre-wrap", alignSelf: "flex-start" }}>
-              <div style={{ fontFamily: "IBM Plex Sans", fontWeight: 600, fontSize: 13, marginBottom: 16 }}>{d.absender}</div>
+            <div style={{ width: 480, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.12)", padding: "36px 40px", fontSize: 13.5, lineHeight: 1.7, fontFamily: "Georgia, serif", whiteSpace: "pre-wrap", alignSelf: "flex-start" }}>
+              <div style={{ fontFamily: "IBM Plex Sans", fontWeight: 600, fontSize: 14.5, marginBottom: 16 }}>{d.absender}</div>
               {d.vorschau}
             </div>
           )}
@@ -129,7 +129,7 @@ export default function Eingang() {
           <div className="side" style={{ width: 400 }}>
             <div>
               <div className="th" style={{ color: "var(--akzent)" }}>KI hat erkannt</div>
-              <div style={{ fontSize: 14, lineHeight: 1.5, marginTop: 4 }}>{d.erkannt}</div>
+              <div style={{ fontSize: 15.5, lineHeight: 1.5, marginTop: 4 }}>{d.erkannt}</div>
             </div>
             <div>
               <div className="fr">
@@ -141,7 +141,7 @@ export default function Eingang() {
                 <span />
               </div>
               <div className="fr"><span className="lab">Dokumenttyp</span><span>{d.typ}</span><span /></div>
-              <div className="fr"><span className="lab">Dateiname</span><span className="mono" style={{ fontSize: 12 }}>{d.dateiname}</span><span /></div>
+              <div className="fr"><span className="lab">Dateiname</span><span className="mono" style={{ fontSize: 13.5 }}>{d.dateiname}</span><span /></div>
               {felder.map((f) => (
                 <div className="fr" key={f.label}>
                   <span className="lab">{f.label}</span>
@@ -152,7 +152,7 @@ export default function Eingang() {
             </div>
             <div>
               <div className="th">Wird danach erledigt</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, fontSize: 13 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, fontSize: 14.5 }}>
                 {folge.map((f) => <div key={f} style={{ display: "flex", gap: 8 }}><span className="cb on">✓</span>{f}</div>)}
                 <div style={{ display: "flex", gap: 8 }}><span className="cb on">✓</span>Im Verlauf der Akte ablegen</div>
               </div>
@@ -160,8 +160,8 @@ export default function Eingang() {
             {akteId && <Link href={`/akte/${encodeURIComponent(akteId)}`} className="lab">Akte {akteId} öffnen →</Link>}
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn pri" style={{ padding: "8px 16px", fontSize: 13 }} onClick={bestaetigen}>Bestätigen ↵</button>
-              <button className="btn" style={{ padding: "8px 12px", fontSize: 13 }} onClick={async () => { await aktion(d, "verwerfen"); zeige("Verworfen"); laden(); }}>Verwerfen</button>
+              <button className="btn pri" style={{ padding: "8px 16px", fontSize: 14.5 }} onClick={bestaetigen}>Bestätigen ↵</button>
+              <button className="btn" style={{ padding: "8px 12px", fontSize: 14.5 }} onClick={async () => { await aktion(d, "verwerfen"); zeige("Verworfen"); laden(); }}>Verwerfen</button>
             </div>
           </div>
         )}
