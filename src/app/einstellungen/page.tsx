@@ -6,7 +6,7 @@ type Kanzlei = { name: string; zusatz: string; strasse: string; ort: string; tel
 
 function KiEinstellungen() {
   const { zeige } = useStore();
-  const [e, setE] = useState<{ aktiv: boolean; url: string; modell: string } | null>(null);
+  const [e, setE] = useState<{ aktiv: boolean; url: string; modell: string; ocr: boolean; ocrModell: string } | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; modelle: string[]; fehler?: string } | null>(null);
   const pruefen = () => { setStatus(null); fetch("/api/ki/status").then((r) => r.json()).then(setStatus); };
   useEffect(() => { fetch("/api/ki/einstellungen").then((r) => r.json()).then(setE); pruefen(); }, []);
@@ -38,7 +38,46 @@ function KiEinstellungen() {
       <div className="lab" style={{ marginTop: 8 }}>
         Status: {!status ? "prüfe …" : status.ok ? `✓ bereit (${e.modell})` : `✗ ${status.fehler}`} · <a href="#" onClick={(x) => { x.preventDefault(); pruefen(); }}>erneut prüfen</a>
       </div>
-      <div className="lab" style={{ marginTop: 4 }}>Einrichtung: Ollama installieren, dann <span className="mono">ollama pull {e.modell}</span>. Empfehlung: qwen2.5:7b (8 GB RAM) oder qwen2.5:14b (16 GB).</div>
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 200px", gap: 10, alignItems: "end", marginTop: 14 }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center", paddingBottom: 6 }}>
+          <input type="checkbox" checked={e.ocr} onChange={(x) => speichern({ ...e, ocr: x.target.checked })} /> Texterkennung für Scans
+        </label>
+        <div className="lab" style={{ paddingBottom: 6 }}>Gescannte PDFs und Fotos werden mit einem lokalen Bildmodell gelesen (bis 4 Seiten).</div>
+        <label><div className="lab">Bildmodell</div>
+          <input className="feld" style={{ width: "100%" }} list="ki-modelle" value={e.ocrModell} onChange={(x) => setE({ ...e, ocrModell: x.target.value })} onBlur={() => speichern()} />
+        </label>
+      </div>
+      <div className="lab" style={{ marginTop: 4 }}>Einrichtung: Ollama installieren, dann <span className="mono">ollama pull {e.modell}</span>. Empfehlung: qwen2.5:7b (8 GB RAM) oder qwen2.5:14b (16 GB). Für Scans zusätzlich <span className="mono">ollama pull {e.ocrModell}</span>.</div>
+    </div>
+  );
+}
+
+function MailKonto() {
+  const { zeige } = useStore();
+  const [k, setK] = useState<{ aktiv: boolean; host: string; port: number; benutzer: string; ordner: string; tls: boolean; hatPasswort: boolean } | null>(null);
+  const [pw, setPw] = useState("");
+  useEffect(() => { fetch("/api/mail/konto").then((r) => r.json()).then(setK); }, []);
+  if (!k) return null;
+  const speichern = async () => {
+    const r = await fetch("/api/mail/konto", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...k, passwort: pw || undefined }) });
+    if (r.ok) { setK(await r.json()); setPw(""); zeige("Mailkonto gespeichert"); }
+  };
+  const f = (key: "host" | "benutzer" | "ordner", l: string, w: string) => (
+    <label><div className="lab">{l}</div><input className="feld" style={{ width: w }} value={k[key]} onChange={(x) => setK({ ...k, [key]: x.target.value })} /></label>
+  );
+  return (
+    <div style={{ marginTop: 28, maxWidth: 720 }}>
+      <div className="th" style={{ marginBottom: 8 }}>Mailkonto (IMAP)</div>
+      <div className="lab" style={{ marginBottom: 10, lineHeight: 1.5 }}>Zum Abrufen per „Abrufen“ im Mailbereich. Es wird nur gelesen, nichts als gelesen markiert. Outlook/Microsoft 365 folgt über Microsoft Graph; bis dahin Mails aus Outlook in den Mailbereich ziehen.</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        {f("host", "Server", "220px")}
+        <label><div className="lab">Port</div><input className="feld" style={{ width: 80 }} value={k.port} onChange={(x) => setK({ ...k, port: Number(x.target.value) || 993 })} /></label>
+        {f("benutzer", "Benutzer", "220px")}
+        <label><div className="lab">Passwort {k.hatPasswort && "(gespeichert)"}</div><input className="feld" type="password" autoComplete="new-password" style={{ width: 180 }} value={pw} placeholder={k.hatPasswort ? "••••••" : ""} onChange={(x) => setPw(x.target.value)} /></label>
+        {f("ordner", "Ordner", "120px")}
+        <button className="btn pri" onClick={speichern}>Speichern</button>
+      </div>
+      <div className="lab" style={{ marginTop: 6 }}>Passwort wird verschlüsselt gespeichert.</div>
     </div>
   );
 }
@@ -118,7 +157,7 @@ export default function Einstellungen() {
           </div>
         </div>
       </div>
-          <div style={{ padding: "0 28px 28px" }}><KiEinstellungen /></div>
+          <div style={{ padding: "0 28px 28px" }}><KiEinstellungen /><MailKonto /></div>
     </>
   );
 }

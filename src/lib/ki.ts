@@ -1,8 +1,8 @@
 // Lokale KI über Ollama (https://ollama.com). Es werden nur Adressen im lokalen Netz akzeptiert (§ 203 StGB).
 import { db } from "./db";
 
-export interface KiEinstellungen { aktiv: boolean; url: string; modell: string }
-const STANDARD: KiEinstellungen = { aktiv: false, url: "http://127.0.0.1:11434", modell: "qwen2.5:7b" };
+export interface KiEinstellungen { aktiv: boolean; url: string; modell: string; ocr: boolean; ocrModell: string }
+const STANDARD: KiEinstellungen = { aktiv: false, url: "http://127.0.0.1:11434", modell: "qwen2.5:7b", ocr: false, ocrModell: "qwen2.5vl:7b" };
 
 function tabelle() {
   db().exec("CREATE TABLE IF NOT EXISTS ki (id INTEGER PRIMARY KEY CHECK (id=1), daten TEXT NOT NULL)");
@@ -44,6 +44,7 @@ export async function kiStatus(e = kiLaden()): Promise<{ ok: boolean; modelle: s
     const j = (await r.json()) as { models?: { name: string }[] };
     const modelle = (j.models ?? []).map((m) => m.name);
     if (!modelle.includes(e.modell)) return { ok: false, modelle, fehler: `Modell ${e.modell} nicht installiert (ollama pull ${e.modell})` };
+    if (e.ocr && !modelle.includes(e.ocrModell)) return { ok: false, modelle, fehler: `Texterkennungs-Modell ${e.ocrModell} nicht installiert (ollama pull ${e.ocrModell})` };
     return { ok: true, modelle };
   } catch (x) {
     return { ok: false, modelle: [], fehler: x instanceof KiFehler ? x.message : "Ollama nicht erreichbar – läuft es?" };
@@ -106,4 +107,28 @@ function fehlerText(x: unknown, nutzer?: AbortSignal) {
   const n = (x as Error)?.name;
   if (n === "TimeoutError" || n === "AbortError") return new KiFehler("KI hat zu lange gebraucht");
   return new KiFehler("Ollama nicht erreichbar");
+}
+
+/** Texterkennung (OCR) für ein Bild mit einem lokalen Bildmodell. */
+export async function kiBildText(png: Buffer, o: { signal?: AbortSignal } = {}, e = kiLaden()): Promise<string> {
+  if (!e.ocr) throw new KiFehler("Texterkennung ist ausgeschaltet");
+  let r: Response;
+  try {
+    r = await fetch(basis(e) + "/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
+      signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(180_000)]) : AbortSignal.timeout(180_000),
+      body: JSON.stringify({
+        model: e.ocrModell, stream: false, options: { temperature: 0, num_ctx: 8192 },
+        messages: [{
+          role: "user", images: [png.toString("base64")],
+          content: "Schreibe den gesamten Text dieses gescannten Dokuments wörtlich ab, Zeile für Zeile, ohne Kommentar. Beträge, Daten und Nummern exakt übernehmen. Tabellen als Zeilen mit | trennen.",
+        }],
+      }),
+    });
+  } catch (x) {
+    throw (x as Error)?.name === "TimeoutError" ? new KiFehler("Texterkennung hat zu lange gebraucht") : new KiFehler("Ollama nicht erreichbar");
+  }
+  if (!r.ok) throw new KiFehler(`Ollama: ${(await r.text()).slice(0, 200)}`);
+  const j = (await r.json()) as { message?: { content?: string } };
+  return (j.message?.content ?? "").trim();
 }

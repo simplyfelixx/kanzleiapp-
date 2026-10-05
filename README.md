@@ -26,6 +26,17 @@ Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr �
 - Deaktivierte Benutzer und Rollenwechsel wirken spätestens nach 30 Sekunden.
 - Bei `next start` ohne HTTPS (nur lokal) `AUTH_HTTP=1` setzen, sonst wird das Cookie nicht gesendet.
 
+## Mail
+
+- **Importieren:** Mails aus Outlook einfach in den Mailbereich ziehen (`.msg`) oder `.eml`-Dateien wählen. Doppelte Mails werden erkannt.
+- **Abrufen:** per IMAP (Konto unter Einstellungen, Passwort verschlüsselt gespeichert). Outlook/Microsoft 365 folgt über Microsoft Graph.
+- Jeder Anhang (PDF, Bild) wird sofort ausgewertet und als Karte unter der Mail angezeigt: Typ, Absender, Beträge, Zeichen, Frist, Kurz-Zusammenfassung, passende Akte. Dazu „Öffnen“ und „In Akte ablegen“ (Name nach Schema).
+- Mailtext wird nur als Text angezeigt (kein HTML, keine externen Inhalte).
+
+## Texterkennung (Scans)
+
+Gescannte PDFs und Fotos haben keinen Text. Mit **Einstellungen → Texterkennung für Scans** werden sie mit einem lokalen Bildmodell gelesen (`ollama pull qwen2.5vl:7b`), bis 4 Seiten pro Dokument. Gilt für Eingang und Mail. Solche Werte sind mit „SCAN · OCR“ markiert und sollten besonders geprüft werden.
+
 ## Protokoll
 
 Unter „Mehr → Protokoll“ (Admin und Anwalt): Anmeldungen, geöffnete Akten und Dokumente, Bestätigungen, Fristen, KI-Nutzung, Benutzer- und Einstellungsänderungen.

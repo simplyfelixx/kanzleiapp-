@@ -3,6 +3,7 @@ import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { aktenIndex, dateiSpeichern, db, verlaufEintrag, Wirkung } from "@/lib/db";
 import { erkenneDokument, schemaName } from "@/lib/dokerkennung";
+import { dateiText } from "@/lib/dateitext";
 import { kiLaden } from "@/lib/ki";
 import { kiDokument } from "@/lib/kiauswertung";
 
@@ -11,17 +12,6 @@ export const runtime = "nodejs";
 
 const ERLAUBT = /\.(pdf|jpe?g|png|heic|txt)$/i;
 const MAX = 25 * 1024 * 1024;
-
-async function pdfText(buf: Buffer): Promise<string> {
-  try {
-    const { extractText, getDocumentProxy } = await import("unpdf");
-    const pdf = await getDocumentProxy(new Uint8Array(buf));
-    const { text } = await extractText(pdf, { mergePages: true });
-    return Array.isArray(text) ? text.join(" ") : text;
-  } catch {
-    return "";
-  }
-}
 
 const KONTO_POS: Record<string, string> = { Reparaturrechnung: "Reparatur", Mietwagenrechnung: "Mietwagen", Gutachterrechnung: "Gutachterkosten", Abschleppkostenrechnung: "Abschleppkosten" };
 
@@ -46,7 +36,8 @@ export async function POST(req: Request) {
     const buf = Buffer.from(await f.arrayBuffer());
     const endung = (f.name.match(/\.\w+$/)?.[0] ?? ".pdf").toLowerCase();
     if (endung === ".pdf" && buf.subarray(0, 4).toString() !== "%PDF") return NextResponse.json({ fehler: `${f.name}: keine gültige PDF-Datei` }, { status: 400 });
-    const text = endung === ".pdf" ? await pdfText(buf) : endung === ".txt" ? buf.toString("utf8") : "";
+    const dt = await dateiText(buf, endung);
+    const text = dt.text;
     const e = erkenneDokument(text, f.name, index);
     // KI (lokal, pseudonymisiert) verfeinert Typ, Absender und Zusammenfassung; Beträge/Fristen bleiben regelbasiert
     let kiText = "";
@@ -87,6 +78,8 @@ export async function POST(req: Request) {
       ...(e.zeichen ? [{ label: "Zeichen", wert: e.zeichen, quelle: "Text im Dokument" }] : []),
       ...(e.akteGrund ? [{ label: "Zuordnung", wert: e.akteGrund, quelle: "Abgleich mit Beteiligten" }] : []),
       ...(kiText ? [{ label: "Inhalt", wert: kiText, quelle: "KI (lokal) – bitte gegenlesen" }] : []),
+      ...(dt.quelle === "ocr" ? [{ label: "Texterkennung", wert: "Scan – Text per KI gelesen", quelle: "OCR (lokal) – Werte besonders prüfen" }] : []),
+      ...(dt.hinweis ? [{ label: "Hinweis", wert: dt.hinweis, quelle: "" }] : []),
     ];
     const zeit = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
     const r = d.prepare(`INSERT INTO eingang (quelle,zeit,typ,absender,akte_id,sicher,erkannt,dateiname,felder,folgeaktionen,vorschau,wirkung,datei,datum)
