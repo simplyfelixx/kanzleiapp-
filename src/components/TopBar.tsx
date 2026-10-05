@@ -18,8 +18,7 @@ const hauptNav = [
   { href: "/adressbuch", label: "Adressbuch" },
 ];
 const mehrNav = [
-  { href: "/akte", label: "Akte (Beispiel)" },
-  { href: "/akte/bearbeiten", label: "Beteiligte bearbeiten" },
+  { href: "/akte/214%2F26", label: "Akte Müller (Beispiel)" },
   { href: "/phasen", label: "Phasen (Kanban)" },
   { href: "/vorlagen", label: "Vorlagen" },
   { href: "/portal-verwaltung", label: "Portal-Verwaltung" },

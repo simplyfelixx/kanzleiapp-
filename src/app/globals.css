@@ -54,3 +54,5 @@ button { font: inherit; cursor: pointer; }
 table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.t td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line2); }
 .num { font-family: "IBM Plex Mono", monospace; text-align: right; }
+.feld { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid #d5d8dc; border-radius: 4px; background: #fff; color: var(--text); }
+.feld:focus { outline: 2px solid var(--akzent-line); border-color: var(--akzent); }

@@ -1,47 +1,219 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { akten, euro, prioFarbe } from "@/lib/data";
+import { useCallback, useEffect, useState } from "react";
+import { euro, prioFarbe, Prioritaet } from "@/lib/data";
+import { useStore } from "@/components/Store";
+import type { AkteRow, BeteiligterRow, KontoRow } from "@/lib/db";
+
+// Felder und Rollen hier statt aus db.ts, damit kein Server-Code im Browser landet
+const FALLFELDER = [
+  ["unfalltag", "Unfalltag"], ["unfallort", "Unfallort"], ["schilderung", "Unfallschilderung"],
+  ["ausfall", "Mietwagen / Nutzungsausfall"], ["verletzt", "Verletzungen"], ["polizei", "Polizei (Dienststelle, Az.)"],
+  ["akteneinsicht", "Akteneinsicht"], ["haftung", "Haftung"], ["vollkasko", "Vollkasko / SB"], ["rsv", "Rechtsschutz"],
+  ["fahrbereit", "Fahrbereit / Reparatur"], ["finanzierung", "Finanzierung / Leasing"], ["mw_kuerzung", "MW-Kürzung"],
+] as const;
+const ROLLEN = ["Mandant", "Gegner", "Versicherung", "Werkstatt", "Gutachter", "Bank", "Polizei", "Zeuge"];
+const PHASEN = ["Mandat", "Unterlagen", "Anspruch", "Prüffrist", "Kürzung", "Klage", "Abschluss"];
+const PRIOS: [Prioritaet, string][] = [["heute", "Heute"], ["woche", "Diese Woche"], ["pruefen", "Prüfen"], ["wartet", "Wartet"], ["laeuft", "Läuft"]];
+
+type Daten = { akte: AkteRow; beteiligte: BeteiligterRow[]; konto: KontoRow[] };
+const leer = (rolle: string): Partial<BeteiligterRow> => ({ rolle, name: "", adresse: "", telefon: "", email: "", iban: "", ansprechpartner: "", zeichen: "", vorsteuer: 0, notiz: "" });
 
 export default function AktePage() {
   const { id } = useParams<{ id: string }>();
-  const a = akten.find((x) => x.id === decodeURIComponent(id));
-  if (!a) return <div className="empty">Akte nicht gefunden. <Link href="/">Zurück</Link></div>;
-  const summe = (k: "gefordert" | "gezahlt") => a.konto.reduce((s, p) => s + p[k], 0);
+  const az = decodeURIComponent(id);
+  const { zeige } = useStore();
+  const [d, setD] = useState<Daten | null>(null);
+  const [fehlt, setFehlt] = useState(false);
+  const [panel, setPanel] = useState<Partial<BeteiligterRow> | null>(null);
+  const [fallEdit, setFallEdit] = useState<Record<string, string> | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/akten/${encodeURIComponent(az)}`).then(async (r) => (r.ok ? setD(await r.json()) : setFehlt(true)));
+  }, [az]);
+
+  const speichern = useCallback(async (body: object, msg = "Gespeichert") => {
+    const r = await fetch(`/api/akten/${encodeURIComponent(az)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.ok) { setD(await r.json()); zeige(msg); } else zeige("Fehler beim Speichern");
+  }, [az, zeige]);
+
+  // Esc schließt das Seitenfenster
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setPanel(null); setFallEdit(null); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  if (fehlt) return <div className="empty">Akte {az} nicht gefunden. <Link href="/akten">Zur Aktenliste</Link></div>;
+  if (!d) return <div className="empty">Lade Akte …</div>;
+  const { akte, beteiligte, konto } = d;
+  const fall: Record<string, string> = JSON.parse(akte.falldaten || "{}");
+  const sum = (k: "gefordert" | "gezahlt") => konto.reduce((s, p) => s + p[k], 0);
+  const offen = sum("gefordert") - sum("gezahlt");
 
   return (
-    <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 16, overflow: "auto" }}>
-      <Link href="/" className="lab" style={{ textDecoration: "none" }}>← Mein Tag</Link>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span className="dot" style={{ background: prioFarbe[a.prioritaet] }} />
-        <span style={{ fontSize: 19, fontWeight: 600 }}>{a.titel}</span>
-        <span className="k">{a.gebiet}</span>
-        <span className="lab mono">Az. {a.id}</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr 1fr 1fr", border: "1px solid var(--line)", borderRadius: 4 }}>
-        <div style={{ padding: "10px 14px", borderRight: "1px solid var(--line)" }}><div className="lab">Mandant</div><div style={{ fontWeight: 500 }}>{a.mandant}</div><div className="mono" style={{ fontSize: 12 }}>{a.mandantTel}</div></div>
-        <div style={{ padding: "10px 14px", borderRight: "1px solid var(--line)", background: "var(--akzent-bg)" }}><div className="lab">{a.versicherung} · {a.sachbearbeiter}</div><div className="mono" style={{ fontWeight: 600 }}>{a.durchwahl}</div><div className="mono" style={{ fontSize: 12 }}>Schaden-Nr. {a.schadennummer}</div></div>
-        <div style={{ padding: "10px 14px", borderRight: "1px solid var(--line)" }}><div className="lab">Phase</div><div style={{ color: "var(--akzent)", fontWeight: 500 }}>{a.phase}</div></div>
-        <div style={{ padding: "10px 14px" }}><div className="lab">Offen</div><div className="mono" style={{ fontSize: 18, fontWeight: 600, color: "var(--rot)" }}>{euro(summe("gefordert") - summe("gezahlt"))}</div></div>
-      </div>
-      <div style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "10px 14px", background: "var(--bg3)" }}>
-        <div className="th" style={{ color: "var(--akzent)" }}>Stand · KI-Zusammenfassung</div>
-        <div style={{ marginTop: 4, lineHeight: 1.5 }}>{a.stand}</div>
-      </div>
-      {a.konto.length > 0 && (
-        <div style={{ maxWidth: 560 }}>
-          <div className="th">Aktenkonto</div>
-          <table className="t">
-            <tbody>
-              <tr className="lab"><td>Position</td><td className="num">Gefordert</td><td className="num">Gezahlt</td><td className="num">Offen</td></tr>
-              {a.konto.map((p) => (
-                <tr key={p.position}><td>{p.position}</td><td className="num">{euro(p.gefordert)}</td><td className="num">{euro(p.gezahlt)}</td><td className="num" style={{ color: p.gefordert > p.gezahlt ? "var(--rot)" : undefined }}>{euro(p.gefordert - p.gezahlt)}</td></tr>
-              ))}
-            </tbody>
-          </table>
+    <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+      <div style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "14px 24px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Kopf */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <Link href="/akten" className="lab" style={{ textDecoration: "none" }}>← Akten</Link>
+          <span className="dot" style={{ background: prioFarbe[akte.prioritaet as Prioritaet] ?? "var(--grau)" }} />
+          <Inline value={akte.titel} onSave={(v) => speichern({ art: "akte", titel: v })} style={{ fontSize: 19, fontWeight: 600 }} />
+          <span className="k">{akte.gebiet}</span>
+          <span className="lab mono">Az. {akte.id}</span>
+          <div style={{ flex: 1 }} />
+          <select className="feld" value={akte.prioritaet} onChange={(e) => speichern({ art: "akte", prioritaet: e.target.value })}>
+            {PRIOS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+          <select className="feld" value={akte.phase} onChange={(e) => speichern({ art: "akte", phase: e.target.value })}>
+            {[...new Set([...PHASEN, akte.phase])].map((p) => <option key={p}>{p}</option>)}
+          </select>
         </div>
+
+        {/* Beteiligte */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 0, border: "1px solid var(--line)", borderRadius: 4 }}>
+          {beteiligte.map((b) => (
+            <div key={b.id} style={{ padding: "10px 14px", borderRight: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: b.rolle === "Versicherung" ? "var(--akzent-bg)" : undefined }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="lab">{b.rolle}{b.ansprechpartner && ` · ${b.ansprechpartner}`}</span>
+                <button className="btn" style={{ padding: "1px 7px", fontSize: 11 }} onClick={() => setPanel(b)}>Bearbeiten</button>
+              </div>
+              <div style={{ fontWeight: 500 }}>{b.name || "–"}</div>
+              {b.telefon && <div className="mono" style={{ fontSize: 13, fontWeight: b.rolle === "Versicherung" ? 600 : 400 }}>{b.telefon} <a href={`tel:${b.telefon.replace(/[^\d+]/g, "")}`} style={{ fontSize: 11 }}>anrufen</a></div>}
+              {b.zeichen && <div className="mono" style={{ fontSize: 12 }}>{b.rolle === "Versicherung" ? "Schaden-Nr. " : ""}{b.zeichen} <a href="#" style={{ fontSize: 11 }} onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(b.zeichen); zeige("Kopiert"); }}>kopieren</a></div>}
+            </div>
+          ))}
+          <div style={{ padding: "10px 14px", display: "flex", alignItems: "center" }}>
+            <button className="btn" onClick={() => setPanel(leer("Gegner"))}>+ Beteiligter</button>
+          </div>
+        </div>
+
+        {/* Zusammenfassung */}
+        <div style={{ border: "1px solid var(--line)", borderRadius: 4, background: "var(--bg3)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div>
+            <div className="th">Worum geht es</div>
+            <Inline multiline value={akte.worum} platzhalter="Kurz beschreiben, worum es in der Akte geht …" onSave={(v) => speichern({ art: "akte", worum: v })} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 14 }}>
+            {([["stand_vorliegend", "Vorliegend", "var(--gruen)"], ["stand_ausstehend", "Ausstehend", "#B5620A"], ["stand_naechster", "Nächster Schritt", "var(--akzent)"]] as const).map(([k, l, c]) => (
+              <div key={k}>
+                <div className="lab" style={{ fontWeight: 600, color: c }}>{l}</div>
+                <Inline multiline value={akte[k]} platzhalter="–" onSave={(v) => speichern({ art: "akte", [k]: v })} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
+          {/* Aktenkonto */}
+          <div>
+            <div className="th">Aktenkonto</div>
+            <table className="t">
+              <tbody>
+                <tr className="lab"><td>Position</td><td className="num">Gefordert</td><td className="num">Gezahlt</td><td className="num">Offen</td><td /></tr>
+                {konto.map((p) => (
+                  <tr key={p.id}>
+                    <td><Inline value={p.position} onSave={(v) => speichern({ art: "konto", ...p, position: v })} /></td>
+                    <td className="num"><Inline value={p.gefordert.toLocaleString("de-DE", { minimumFractionDigits: 2 })} onSave={(v) => speichern({ art: "konto", ...p, gefordert: v })} /></td>
+                    <td className="num"><Inline value={p.gezahlt.toLocaleString("de-DE", { minimumFractionDigits: 2 })} onSave={(v) => speichern({ art: "konto", ...p, gezahlt: v })} /></td>
+                    <td className="num" style={{ color: p.gefordert > p.gezahlt ? "var(--rot)" : undefined }}>{euro(p.gefordert - p.gezahlt)}</td>
+                    <td style={{ textAlign: "right" }}><a href="#" className="lab" onClick={(e) => { e.preventDefault(); if (confirm(`„${p.position}“ löschen?`)) speichern({ art: "konto_loeschen", id: p.id }, "Gelöscht"); }}>✕</a></td>
+                  </tr>
+                ))}
+                <tr><td style={{ fontWeight: 600 }}>Summe</td><td className="num" style={{ fontWeight: 600 }}>{euro(sum("gefordert"))}</td><td className="num" style={{ fontWeight: 600 }}>{euro(sum("gezahlt"))}</td><td className="num" style={{ fontWeight: 600, color: offen > 0 ? "var(--rot)" : undefined }}>{euro(offen)}</td><td /></tr>
+              </tbody>
+            </table>
+            <button className="btn" style={{ marginTop: 8 }} onClick={() => speichern({ art: "konto", position: "Neue Position", gefordert: 0, gezahlt: 0 }, "Position hinzugefügt")}>+ Position</button>
+            <div className="lab" style={{ marginTop: 6 }}>Werte anklicken zum Ändern · Enter speichert</div>
+          </div>
+
+          {/* Falldaten */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="th">Fall</span>
+              <button className="btn" style={{ padding: "1px 7px", fontSize: 11 }} onClick={() => setFallEdit({ ...fall })}>Bearbeiten</button>
+            </div>
+            {FALLFELDER.map(([k, l]) => (
+              <div className="fr" key={k} style={{ gridTemplateColumns: "150px 1fr" }}>
+                <span className="lab">{l}</span>
+                <span style={{ color: fall[k] ? undefined : "var(--muted)" }}>{fall[k] || "–"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Seitenfenster: Beteiligter */}
+      {panel && (
+        <Seitenfenster titel={panel.id ? `${panel.rolle}: ${panel.name}` : "Neuer Beteiligter"} onClose={() => setPanel(null)}>
+          <Feld label="Rolle"><select className="feld" value={panel.rolle} onChange={(e) => setPanel({ ...panel, rolle: e.target.value })}>{ROLLEN.map((r) => <option key={r}>{r}</option>)}</select></Feld>
+          {([["name", "Name / Firma"], ["ansprechpartner", "Ansprechpartner"], ["adresse", "Adresse"], ["telefon", "Telefon"], ["email", "E-Mail"], ["zeichen", "Zeichen (Schaden-Nr., Kennzeichen, Az.)"], ["iban", "IBAN"]] as const).map(([k, l]) => (
+            <Feld key={k} label={l}><input className="feld" style={{ width: "100%" }} value={String(panel[k] ?? "")} onChange={(e) => setPanel({ ...panel, [k]: e.target.value })} /></Feld>
+          ))}
+          {panel.rolle === "Mandant" && (
+            <Feld label="Vorsteuerabzug"><label style={{ fontSize: 13 }}><input type="checkbox" checked={!!panel.vorsteuer} onChange={(e) => setPanel({ ...panel, vorsteuer: e.target.checked ? 1 : 0 })} /> berechtigt (netto abrechnen)</label></Feld>
+          )}
+          <Feld label="Notiz"><textarea className="feld" style={{ width: "100%", minHeight: 60 }} value={panel.notiz ?? ""} onChange={(e) => setPanel({ ...panel, notiz: e.target.value })} /></Feld>
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <button className="btn pri" onClick={async () => { await speichern({ art: "beteiligter", ...panel }); setPanel(null); }}>Speichern</button>
+            <button className="btn" onClick={() => setPanel(null)}>Abbrechen</button>
+            <div style={{ flex: 1 }} />
+            {panel.id && <button className="btn" style={{ color: "var(--rot)" }} onClick={async () => { if (confirm("Beteiligten entfernen?")) { await speichern({ art: "beteiligter_loeschen", id: panel.id }, "Entfernt"); setPanel(null); } }}>Entfernen</button>}
+          </div>
+        </Seitenfenster>
       )}
-      <div className="lab">Prototyp – vollständige Aktenansicht folgt.</div>
+
+      {/* Seitenfenster: Falldaten */}
+      {fallEdit && (
+        <Seitenfenster titel="Falldaten bearbeiten" onClose={() => setFallEdit(null)}>
+          {FALLFELDER.map(([k, l]) => (
+            <Feld key={k} label={l}>
+              {k === "schilderung"
+                ? <textarea className="feld" style={{ width: "100%", minHeight: 60 }} value={fallEdit[k] ?? ""} onChange={(e) => setFallEdit({ ...fallEdit, [k]: e.target.value })} />
+                : <input className="feld" style={{ width: "100%" }} value={fallEdit[k] ?? ""} onChange={(e) => setFallEdit({ ...fallEdit, [k]: e.target.value })} />}
+            </Feld>
+          ))}
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <button className="btn pri" onClick={async () => { await speichern({ art: "falldaten", werte: fallEdit }); setFallEdit(null); }}>Speichern</button>
+            <button className="btn" onClick={() => setFallEdit(null)}>Abbrechen</button>
+          </div>
+        </Seitenfenster>
+      )}
     </div>
   );
+}
+
+function Seitenfenster({ titel, onClose, children }: { titel: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(22,25,29,.25)", zIndex: 40 }} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 480, background: "#fff", borderLeft: "1px solid #c9ccd1", boxShadow: "-8px 0 24px rgba(0,0,0,.1)", zIndex: 41, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center" }}>
+          <span style={{ fontSize: 17, fontWeight: 600 }}>{titel}</span><div style={{ flex: 1 }} /><span className="k">Esc</span>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: "12px 20px" }}>{children}</div>
+      </div>
+    </>
+  );
+}
+
+function Feld({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div style={{ padding: "6px 0" }}><div className="lab" style={{ marginBottom: 3 }}>{label}</div>{children}</div>;
+}
+
+/** Text, der beim Anklicken zum Eingabefeld wird. Enter (bzw. Klick daneben) speichert, Esc bricht ab. */
+function Inline({ value, onSave, multiline, platzhalter, style }: { value: string; onSave: (v: string) => void; multiline?: boolean; platzhalter?: string; style?: React.CSSProperties }) {
+  const [edit, setEdit] = useState(false);
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  const fertig = () => { setEdit(false); if (v !== value) onSave(v); };
+  if (!edit)
+    return <span onClick={() => setEdit(true)} title="Klicken zum Bearbeiten" style={{ cursor: "text", display: multiline ? "block" : "inline", minHeight: 18, lineHeight: 1.45, fontSize: 13, color: value ? undefined : "var(--muted)", ...style }}>{value || platzhalter || "–"}</span>;
+  const props = {
+    autoFocus: true, value: v, className: "feld", onBlur: fertig,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV(e.target.value),
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" && !(multiline && e.shiftKey)) { e.preventDefault(); fertig(); } if (e.key === "Escape") { e.stopPropagation(); setV(value); setEdit(false); } },
+  };
+  return multiline ? <textarea {...props} style={{ width: "100%", minHeight: 56 }} /> : <input {...props} style={{ width: "100%", ...style }} />;
 }

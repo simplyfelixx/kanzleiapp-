@@ -1,8 +1,5 @@
-import StaticPage from "@/components/StaticPage";
-import { css, html } from "@/designs/akte";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Akte – Kanzlei" };
-
-export default function Page() {
-  return <StaticPage css={css} html={html} kind="desk" />;
+export default function AkteOhneNummer() {
+  redirect("/akten");
 }
