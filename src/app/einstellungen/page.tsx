@@ -1,8 +1,84 @@
-import StaticPage from "@/components/StaticPage";
-import { css, html } from "@/designs/einstellungen";
+"use client";
+import { useEffect, useState } from "react";
+import { useStore } from "@/components/Store";
 
-export const metadata = { title: "Einstellungen – Kanzlei" };
+type Kanzlei = { name: string; zusatz: string; strasse: string; ort: string; telefon: string; email: string; web: string; bank: string; akzent: string; logo: string | null; signatur: string };
 
-export default function Page() {
-  return <StaticPage css={css} html={html} kind="desk" />;
+export default function Einstellungen() {
+  const { zeige } = useStore();
+  const [k, setK] = useState<Kanzlei | null>(null);
+  const [logoV, setLogoV] = useState(0);
+  useEffect(() => { fetch("/api/kanzlei").then((r) => r.json()).then(setK); }, []);
+  if (!k) return <div className="empty">Lade …</div>;
+
+  const speichern = async () => {
+    const r = await fetch("/api/kanzlei", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(k) });
+    setK(await r.json()); zeige("Briefkopf gespeichert");
+  };
+  const logo = async (f: File) => {
+    const fd = new FormData(); fd.append("logo", f);
+    const r = await fetch("/api/kanzlei/logo", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) return zeige(j.fehler);
+    setK(j); setLogoV(Date.now()); zeige("Logo gespeichert");
+  };
+  const feld = (key: keyof Kanzlei, label: string, breit = false) => (
+    <label style={{ gridColumn: breit ? "span 2" : undefined }}>
+      <div className="lab">{label}</div>
+      <input className="feld" style={{ width: "100%" }} value={String(k[key] ?? "")} onChange={(e) => setK({ ...k, [key]: e.target.value })} />
+    </label>
+  );
+
+  return (
+    <>
+      <div className="head">
+        <div><h1>Einstellungen</h1><div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Kanzlei &amp; Briefkopf – gilt für alle Schreiben, später auch Rechnungen und Mandantenportal</div></div>
+      </div>
+      <div style={{ flex: 1, overflow: "auto", padding: "20px 28px", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 28, alignItems: "start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <div className="th">Logo</div>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 8 }}>
+              <label style={{ width: 160, height: 80, border: "2px dashed #b9bec4", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", background: "#fff" }}
+                onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); e.dataTransfer.files[0] && logo(e.dataTransfer.files[0]); }}>
+                {k.logo ? <img src={`/api/kanzlei/logo?v=${logoV}`} alt="Kanzleilogo" style={{ maxWidth: "100%", maxHeight: "100%" }} /> : <span className="lab" style={{ textAlign: "center" }}>Logo hierher ziehen<br />oder klicken</span>}
+                <input type="file" accept=".png,.jpg,.jpeg" style={{ display: "none" }} onChange={(e) => e.target.files?.[0] && logo(e.target.files[0])} />
+              </label>
+              <div className="lab" style={{ lineHeight: 1.5 }}>PNG oder JPG, max. 2 MB.<br />Erscheint oben rechts im Brief.{k.logo && <><br /><a href="#" onClick={async (e) => { e.preventDefault(); const r = await fetch("/api/kanzlei/logo", { method: "DELETE" }); setK(await r.json()); }}>Logo entfernen</a></>}</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {feld("name", "Kanzleiname", true)}
+            {feld("zusatz", "Zusatz (z. B. Rechtsanwälte · Verkehrsrecht)", true)}
+            {feld("strasse", "Straße")}
+            {feld("ort", "PLZ Ort")}
+            {feld("telefon", "Telefon")}
+            {feld("email", "E-Mail")}
+            {feld("bank", "Bankverbindung (Fußzeile)", true)}
+            <label><div className="lab">Akzentfarbe</div><input type="color" value={k.akzent} onChange={(e) => setK({ ...k, akzent: e.target.value })} style={{ width: 60, height: 30, border: "1px solid #d5d8dc", borderRadius: 4 }} /></label>
+          </div>
+          <label><div className="lab">Grußformel / Signatur</div><textarea className="feld" style={{ width: "100%", minHeight: 90 }} value={k.signatur} onChange={(e) => setK({ ...k, signatur: e.target.value })} /></label>
+          <div><button className="btn pri" onClick={speichern}>Speichern</button></div>
+        </div>
+        {/* Live-Vorschau Briefkopf */}
+        <div>
+          <div className="th" style={{ marginBottom: 8 }}>Vorschau</div>
+          <div style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)", padding: "34px 40px", aspectRatio: "1 / 1.414", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 11, position: "relative" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div><div style={{ color: k.akzent, fontWeight: 700, fontSize: 18 }}>{k.name}</div><div style={{ color: "#666", fontSize: 9 }}>{k.zusatz}</div></div>
+              {k.logo && <img src={`/api/kanzlei/logo?v=${logoV}`} alt="" style={{ maxHeight: 48, maxWidth: 140 }} />}
+            </div>
+            <div style={{ borderTop: `1px solid ${k.akzent}`, margin: "10px 0 26px" }} />
+            <div style={{ color: "#666", fontSize: 7 }}>{k.name} · {k.strasse} · {k.ort}</div>
+            <div style={{ marginTop: 6, lineHeight: 1.4 }}>HUK-Coburg<br />Schadenabteilung<br />96444 Coburg</div>
+            <div style={{ marginTop: 40, fontWeight: 700 }}>Schaden-Nr.: 77-4410-2</div>
+            <div style={{ marginTop: 14, color: "#333", lineHeight: 1.6 }}>Sehr geehrte Damen und Herren,<br />…<br /><br /><span style={{ whiteSpace: "pre-wrap" }}>{k.signatur}</span></div>
+            <div style={{ position: "absolute", left: 40, right: 40, bottom: 26, borderTop: "0.5px solid #888", paddingTop: 4, color: "#666", fontSize: 7 }}>
+              {[k.name, k.strasse, k.ort, k.telefon, k.email].filter(Boolean).join(" · ")}<br />{k.bank}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }

@@ -6,6 +6,7 @@ import { euro, prioFarbe, Prioritaet } from "@/lib/data";
 import { useStore } from "@/components/Store";
 import type { AkteRow, BeteiligterRow, KontoRow, FristRow, VerlaufRow, DokumentRow } from "@/lib/db";
 import { DOKTYPEN } from "@/lib/dokerkennung";
+import SchreibenPanel from "@/components/SchreibenPanel";
 
 // Felder und Rollen hier statt aus db.ts, damit kein Server-Code im Browser landet
 const FALLFELDER = [
@@ -31,6 +32,7 @@ export default function AktePage() {
   const [panel, setPanel] = useState<Partial<BeteiligterRow> | null>(null);
   const [fallEdit, setFallEdit] = useState<Record<string, string> | null>(null);
   const [wv, setWv] = useState({ art: "wv", tage: 7, titel: "" });
+  const [schreiben, setSchreiben] = useState(false);
 
   useEffect(() => {
     fetch(`/api/akten/${encodeURIComponent(az)}`).then(async (r) => (r.ok ? setD(await r.json()) : setFehlt(true)));
@@ -78,6 +80,7 @@ export default function AktePage() {
           <span className="k">{akte.gebiet}</span>
           <span className="lab mono">Az. {akte.id}</span>
           <div style={{ flex: 1 }} />
+          <button className="btn pri" onClick={() => setSchreiben(true)}>✉ Schreiben erstellen</button>
           <select className="feld" value={akte.prioritaet} onChange={(e) => speichern({ art: "akte", prioritaet: e.target.value })}>
             {PRIOS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
@@ -195,6 +198,8 @@ export default function AktePage() {
           </div>
         </div>
       </div>
+
+      {schreiben && <SchreibenPanel akteId={az} zeige={zeige} onClose={() => setSchreiben(false)} onFertig={() => { setSchreiben(false); neuladen(); }} />}
 
       {/* Seitenfenster: Beteiligter */}
       {panel && (
