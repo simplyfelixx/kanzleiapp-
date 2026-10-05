@@ -26,6 +26,12 @@ Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr �
 - Deaktivierte Benutzer und Rollenwechsel wirken spätestens nach 30 Sekunden.
 - Bei `next start` ohne HTTPS (nur lokal) `AUTH_HTTP=1` setzen, sonst wird das Cookie nicht gesendet.
 
+## Abrechnung (RVG)
+
+- Kostennote je Akte: Gegenstandswert aus den Schadenpositionen des Aktenkontos, Geschäftsgebühr Nr. 2300 (Standard 1,3), optional Einigungsgebühr Nr. 1000, Pauschale Nr. 7002, 19 % USt.
+- Gebührentabelle § 13 RVG in der Fassung ab 01.06.2025 (`src/lib/rvg.ts`).
+- PDF-Vorschau, beim Erstellen: PDF in der Akte, RA-Kosten im Aktenkonto, Rechnungsnummer JJJJ-NNN. Zahlung erfassen oder stornieren.
+
 ## Mail
 
 - **Importieren:** Mails aus Outlook einfach in den Mailbereich ziehen (`.msg`) oder `.eml`-Dateien wählen. Doppelte Mails werden erkannt.

@@ -199,7 +199,9 @@ function hexRgb(hex: string) {
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 }
 
-export async function briefPdf(opts: { empfaenger: string; text: string; az: string; betreff?: string }): Promise<Buffer> {
+export interface PdfTabelle { zeilen: { text: string; betrag: string; fett?: boolean; linie?: boolean }[]; nachtext?: string }
+
+export async function briefPdf(opts: { empfaenger: string; text: string; az: string; betreff?: string; tabelle?: PdfTabelle; info?: [string, string][] }): Promise<Buffer> {
   const k = kanzleiLaden();
   const pdf = await PDFDocument.create();
   const reg = await pdf.embedFont(StandardFonts.Helvetica);
@@ -230,7 +232,7 @@ export async function briefPdf(opts: { empfaenger: string; text: string; az: str
   let y = H - 158;
   for (const z of opts.empfaenger.split("\n").slice(0, 6)) { page.drawText(sicher(z), { x: L, y, size: 10.5, font: reg }); y -= 14; }
   // Infoblock rechts
-  const info = [["Unser Zeichen", opts.az], ["Datum", new Date().toLocaleDateString("de-DE")], ["Telefon", k.telefon], ["E-Mail", k.email]].filter((x) => x[1]);
+  const info = [["Unser Zeichen", opts.az], ...(opts.info ?? []), ["Datum", new Date().toLocaleDateString("de-DE")], ["Telefon", k.telefon], ["E-Mail", k.email]].filter((x) => x[1]);
   let iy = H - 158;
   for (const [l, v] of info) {
     page.drawText(sicher(l), { x: B - R - 170, y: iy, size: 8, font: reg, color: grau });
@@ -242,7 +244,8 @@ export async function briefPdf(opts: { empfaenger: string; text: string; az: str
   // Text
   y = H - 270;
   const size = 10.5, zh = 15;
-  const zeilen = umbrechen(sicher(opts.text + "\n\n" + k.signatur), reg, size, BR);
+  // Mit Tabelle: Text – Tabelle – Nachtext/Signatur; sonst Text + Signatur
+  const zeilen = umbrechen(sicher(opts.tabelle ? opts.text : opts.text + "\n\n" + k.signatur), reg, size, BR);
   const fusszeile = (p: typeof page, nr: number) => {
     p.drawLine({ start: { x: L, y: 60 }, end: { x: B - R, y: 60 }, thickness: 0.5, color: grau });
     p.drawText(sicher([k.name, k.strasse, k.ort, k.telefon, k.email].filter(Boolean).join(" · ")), { x: L, y: 46, size: 7, font: reg, color: grau });
@@ -257,6 +260,23 @@ export async function briefPdf(opts: { empfaenger: string; text: string; az: str
     const unvollstaendig = z.includes("[[");
     page.drawText(z, { x: L, y, size, font: imBetreff ? fett : reg, color: unvollstaendig ? rgb(0.75, 0.2, 0.12) : rgb(0.08, 0.09, 0.11) });
     y -= zh;
+  }
+  if (opts.tabelle) {
+    y -= 6;
+    for (const z of opts.tabelle.zeilen) {
+      if (y < 100) { fusszeile(page, nr++); page = pdf.addPage([B, H]); y = H - 80; }
+      if (z.linie) { page.drawLine({ start: { x: L, y: y + zh - 3 }, end: { x: B - R, y: y + zh - 3 }, thickness: 0.6, color: grau }); }
+      const f = z.fett ? fett : reg;
+      page.drawText(sicher(z.text), { x: L, y, size, font: f });
+      const t = sicher(z.betrag);
+      page.drawText(t, { x: B - R - f.widthOfTextAtSize(t, size), y, size, font: f });
+      y -= zh + 2;
+    }
+    y -= zh;
+    for (const z of umbrechen(sicher((opts.tabelle.nachtext ? opts.tabelle.nachtext + "\n\n" : "") + k.signatur), reg, size, BR)) {
+      if (y < 80) { fusszeile(page, nr++); page = pdf.addPage([B, H]); y = H - 80; }
+      page.drawText(z, { x: L, y, size, font: reg }); y -= zh;
+    }
   }
   fusszeile(page, nr);
   return Buffer.from(await pdf.save());
