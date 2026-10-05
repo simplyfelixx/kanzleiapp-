@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE, pruefen, type Rolle } from "@/lib/sitzung";
 
 // Ohne Login erreichbar
-const OFFEN = ["/login", "/api/auth/login", "/api/auth/einrichten", "/api/auth/pruefen"];
+// Mandantenportal: eigener Zugang per Link, nie mit Kanzlei-Rechten
+const OFFEN = ["/login", "/api/auth/login", "/api/auth/einrichten", "/api/auth/pruefen", "/p", "/portal", "/api/portal"];
 // Nur für bestimmte Rollen
 const NUR: { pfad: string; rollen: Rolle[]; nurSchreiben?: boolean }[] = [
   { pfad: "/benutzer", rollen: ["admin"] },

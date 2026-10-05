@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { headers } from "next/headers";
 import { db } from "./db";
 
-export type Kategorie = "anmeldung" | "benutzer" | "einstellungen" | "akte" | "dokument" | "eingang" | "frist" | "ki";
+export type Kategorie = "anmeldung" | "benutzer" | "einstellungen" | "akte" | "dokument" | "eingang" | "frist" | "ki" | "portal";
 export interface ProtokollRow {
   id: number; zeit: string; benutzer_id: number | null; kuerzel: string; kategorie: Kategorie;
   aktion: string; akte_id: string | null; details: string; ip: string; hash: string;

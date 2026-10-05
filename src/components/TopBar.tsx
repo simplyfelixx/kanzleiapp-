@@ -21,7 +21,6 @@ const mehrNav = [
   { href: "/phasen", label: "Phasen (Kanban)" },
   { href: "/vorlagen", label: "Vorlagen" },
   { href: "/portal-verwaltung", label: "Portal-Verwaltung" },
-  { href: "/mandantenportal", label: "Mandantenportal (Handy)" },
   { href: "/auswertungen", label: "Auswertungen" },
   { href: "/protokoll", label: "Protokoll" },
   { href: "/einstellungen", label: "Einstellungen" },
@@ -36,10 +35,10 @@ export default function TopBar() {
   const [mehr, setMehr] = useState(false);
   const [offenEingang, setOffenEingang] = useState(0);
   const [ich, setIch] = useState<{ name: string; kuerzel: string; rolle: string } | null>(null);
-  useEffect(() => { if (path !== "/login") fetch("/api/auth/ich").then((r) => (r.ok ? r.json() : null)).then(setIch).catch(() => {}); }, [path]);
+  useEffect(() => { if (path !== "/login" && path !== "/portal") fetch("/api/auth/ich").then((r) => (r.ok ? r.json() : null)).then(setIch).catch(() => {}); }, [path]);
   const abmelden = async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/login"; };
   // Zähler für den Eingang neu laden, wenn sich die Seite ändert oder etwas bestätigt wurde
-  useEffect(() => { if (path === "/login") return; fetch("/api/eingang").then((r) => r.json()).then((d) => setOffenEingang(Array.isArray(d) ? d.length : 0)).catch(() => {}); }, [path, toast]);
+  useEffect(() => { if (path === "/login" || path === "/portal") return; fetch("/api/eingang").then((r) => r.json()).then((d) => setOffenEingang(Array.isArray(d) ? d.length : 0)).catch(() => {}); }, [path, toast]);
 
   // F2 Suche (später), F3 Fallaufnahme, F4 Eingang, F5 Mein Tag
   useEffect(() => {
@@ -54,7 +53,7 @@ export default function TopBar() {
   }, [router]);
   useEffect(() => setMehr(false), [path]);
 
-  if (path === "/login") return null;
+  if (path === "/login" || path === "/portal" || path.startsWith("/p/")) return null;
 
   // Mandantenportal und Ersteinrichtung haben keine Kanzlei-Leiste
   if (path.startsWith("/mandantenportal") || path.startsWith("/einrichtung")) {

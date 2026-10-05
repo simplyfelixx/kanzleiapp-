@@ -10,4 +10,15 @@ if (!process.env.AUTH_SECRET) {
 }
 
 /** @type {import('next').NextConfig} */
-module.exports = { experimental: { serverComponentsExternalPackages: ["better-sqlite3"] } };
+module.exports = {
+  experimental: { serverComponentsExternalPackages: ["better-sqlite3"] },
+  async headers() {
+    const portal = [
+      { key: "Referrer-Policy", value: "no-referrer" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+      { key: "Cache-Control", value: "no-store" },
+      { key: "X-Frame-Options", value: "DENY" },
+    ];
+    return [{ source: "/portal", headers: portal }, { source: "/p/:token", headers: portal }];
+  },
+};
