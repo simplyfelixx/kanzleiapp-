@@ -2,7 +2,7 @@
 import { anonymisieren, tiefZurueck } from "./anonym";
 import { LEER, type Erkannt } from "./erkennung";
 import { DOKTYPEN } from "./dokerkennung";
-import { kiJson } from "./ki";
+import { kiJson, type KiOptionen } from "./ki";
 
 const FELDBESCHREIBUNG: Record<keyof Erkannt, string> = {
   mandant: "Name des Mandanten (Anrufer / Geschädigter)",
@@ -20,8 +20,15 @@ const KEYS = Object.keys(LEER) as (keyof Erkannt)[];
 
 export interface KiFall { werte: Partial<Erkannt>; belege: Partial<Record<keyof Erkannt, string>>; ersetzt: number }
 
-export async function kiFallaufnahme(text: string, heute = new Date()): Promise<KiFall> {
+export type KiStatus =
+  | { schritt: "pseudonym"; ersetzt: number }
+  | { schritt: "laden" }
+  | { schritt: "schreiben"; felder: number; gesamt: number; tokens: number };
+
+export async function kiFallaufnahme(text: string, o: KiOptionen & { status?: (s: KiStatus) => void } = {}, heute = new Date()): Promise<KiFall> {
   const p = anonymisieren(text.slice(0, 12000));
+  o.status?.({ schritt: "pseudonym", ersetzt: p.anzahl });
+  o.status?.({ schritt: "laden" });
   const schema = {
     type: "object",
     properties: Object.fromEntries(KEYS.map((k) => [k, {
@@ -37,7 +44,14 @@ export async function kiFallaufnahme(text: string, heute = new Date()): Promise<
     `Heute ist ${heute.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}.`,
     "Felder:", ...KEYS.map((k) => `- ${k}: ${FELDBESCHREIBUNG[k]}`),
   ].join("\n");
-  const roh = await kiJson<Record<string, { wert?: string; beleg?: string }>>(system, p.text, schema);
+  const roh = await kiJson<Record<string, { wert?: string; beleg?: string }>>(system, p.text, schema, {
+    signal: o.signal,
+    beiToken: (bisher, tokens) => {
+      // Fertige Felder zählen: jedes abgeschlossene "beleg": "…" steht für ein Feld
+      const felder = (bisher.match(/"beleg"\s*:\s*"(?:[^"\\]|\\.)*"/g) ?? []).length;
+      o.status?.({ schritt: "schreiben", felder, gesamt: KEYS.length, tokens });
+    },
+  });
   const ergebnis = tiefZurueck(roh, p.zurueck);
   const werte: Partial<Erkannt> = {}, belege: KiFall["belege"] = {};
   for (const k of KEYS) {

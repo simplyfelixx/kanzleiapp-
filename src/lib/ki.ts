@@ -50,25 +50,60 @@ export async function kiStatus(e = kiLaden()): Promise<{ ok: boolean; modelle: s
   }
 }
 
-/** Fragt das Modell und erzwingt eine JSON-Antwort nach Schema. */
-export async function kiJson<T>(system: string, eingabe: string, schema: object, e = kiLaden()): Promise<T> {
+export interface KiOptionen {
+  signal?: AbortSignal;
+  /** wird bei jedem Stück der Antwort aufgerufen: bisheriger Text, Anzahl Tokens */
+  beiToken?: (bisher: string, tokens: number) => void;
+}
+
+/** Fragt das Modell und erzwingt eine JSON-Antwort nach Schema. Antwort wird gestreamt, Abbruch über signal. */
+export async function kiJson<T>(system: string, eingabe: string, schema: object, o: KiOptionen = {}, e = kiLaden()): Promise<T> {
   if (!e.aktiv) throw new KiFehler("KI ist ausgeschaltet");
+  const zeit = AbortSignal.timeout(300_000);
+  const signal = o.signal ? AbortSignal.any([o.signal, zeit]) : zeit;
   let r: Response;
   try {
     r = await fetch(basis(e) + "/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
-      signal: AbortSignal.timeout(120_000),
+      method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store", signal,
       body: JSON.stringify({
-        model: e.modell, stream: false, format: schema,
+        model: e.modell, stream: true, format: schema,
         options: { temperature: 0, num_ctx: 8192 },
         messages: [{ role: "system", content: system }, { role: "user", content: eingabe }],
       }),
     });
   } catch (x) {
-    throw new KiFehler(x instanceof KiFehler ? x.message : (x as Error).name === "TimeoutError" ? "KI hat zu lange gebraucht" : "Ollama nicht erreichbar");
+    throw fehlerText(x, o.signal);
   }
-  if (!r.ok) throw new KiFehler(`Ollama: ${(await r.text()).slice(0, 200)}`);
-  const j = (await r.json()) as { message?: { content?: string } };
-  try { return JSON.parse(j.message?.content ?? "") as T; }
+  if (!r.ok || !r.body) throw new KiFehler(`Ollama: ${(await r.text()).slice(0, 200)}`);
+  const leser = r.body.getReader(), dec = new TextDecoder();
+  let puffer = "", text = "", tokens = 0;
+  try {
+    for (;;) {
+      const { done, value } = await leser.read();
+      if (done) break;
+      puffer += dec.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = puffer.indexOf("\n")) >= 0) {
+        const zeile = puffer.slice(0, nl).trim(); puffer = puffer.slice(nl + 1);
+        if (!zeile) continue;
+        const j = JSON.parse(zeile) as { message?: { content?: string }; error?: string };
+        if (j.error) throw new KiFehler(`Ollama: ${j.error}`);
+        if (j.message?.content) { text += j.message.content; tokens++; o.beiToken?.(text, tokens); }
+      }
+    }
+  } catch (x) {
+    leser.cancel().catch(() => {});
+    if (x instanceof KiFehler) throw x;
+    throw fehlerText(x, o.signal);
+  }
+  try { return JSON.parse(text) as T; }
   catch { throw new KiFehler("KI-Antwort war kein gültiges JSON"); }
+}
+
+function fehlerText(x: unknown, nutzer?: AbortSignal) {
+  if (nutzer?.aborted) return new KiFehler("abgebrochen");
+  if (x instanceof KiFehler) return x;
+  const n = (x as Error)?.name;
+  if (n === "TimeoutError" || n === "AbortError") return new KiFehler("KI hat zu lange gebraucht");
+  return new KiFehler("Ollama nicht erreichbar");
 }

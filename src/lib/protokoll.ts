@@ -36,14 +36,14 @@ function lokaleZeit() {
 }
 
 /** Eintrag schreiben. Benutzer und IP kommen aus der Anfrage (Middleware), wenn nicht angegeben. */
-export function protokoll(e: { kategorie: Kategorie; aktion: string; akte?: string | null; details?: string; benutzer?: { id: number | null; kuerzel: string } }) {
+export function protokoll(e: { kategorie: Kategorie; aktion: string; akte?: string | null; details?: string; benutzer?: { id: number | null; kuerzel: string }; ip?: string }) {
   try {
     tabelle();
-    let bid: number | null = e.benutzer?.id ?? null, kz = e.benutzer?.kuerzel ?? "", ip = "";
+    let bid: number | null = e.benutzer?.id ?? null, kz = e.benutzer?.kuerzel ?? "", ip = e.ip ?? "";
     try {
       const h = headers();
       if (!e.benutzer) { const x = Number(h.get("x-benutzer")); bid = x || null; kz = h.get("x-kuerzel") ?? ""; }
-      ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || "";
+      ip ||= (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || "";
     } catch { /* außerhalb einer Anfrage */ }
     const r = { zeit: lokaleZeit(), benutzer_id: bid, kuerzel: kz, kategorie: e.kategorie, aktion: e.aktion.slice(0, 200), akte_id: e.akte ?? null, details: (e.details ?? "").slice(0, 1000), ip: ip.slice(0, 64) };
     const d = db();

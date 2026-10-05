@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { erkenne, fehlt, Erkannt, LEER } from "@/lib/erkennung";
 import { useStore } from "@/components/Store";
 
@@ -23,19 +23,51 @@ export default function Fallaufnahme() {
   // KI-Ergebnis gilt nur für den Text, aus dem es stammt
   const [ki, setKi] = useState<{ text: string; werte: Partial<Erkannt>; belege: Partial<Record<keyof Erkannt, string>>; ersetzt: number } | null>(null);
   const [kiLaeuft, setKiLaeuft] = useState(false);
+  const [kiFortschritt, setKiFortschritt] = useState<{ text: string; anteil: number | null; sek: number } | null>(null);
+  const abbruch = useRef<AbortController | null>(null);
+  const kiAbbrechen = () => abbruch.current?.abort();
   const [kiStatus, setKiStatus] = useState<{ aktiv: boolean; ok: boolean; fehler?: string } | null>(null);
   useEffect(() => { fetch("/api/ki/status").then((r) => r.json()).then(setKiStatus).catch(() => {}); }, []);
   const kiAktuell = ki && ki.text === text ? ki : null;
 
   const kiAuswerten = async () => {
     if (!text.trim() || kiLaeuft) return;
+    const ctrl = new AbortController();
+    abbruch.current = ctrl;
     setKiLaeuft(true);
-    const r = await fetch("/api/ki/fallaufnahme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
-    const j = await r.json().catch(() => ({}));
-    setKiLaeuft(false);
-    if (!r.ok) return zeige(j.fehler ?? "KI-Fehler");
-    setKi({ text, ...j });
-    zeige(`KI-Auswertung fertig · ${j.ersetzt} Angaben vorher pseudonymisiert`);
+    setKiFortschritt({ text: "Starte …", anteil: null, sek: 0 });
+    const t0 = Date.now();
+    const uhr = setInterval(() => setKiFortschritt((f) => f && { ...f, sek: Math.round((Date.now() - t0) / 1000) }), 1000);
+    const fertig = (meldung?: string) => { clearInterval(uhr); setKiLaeuft(false); setKiFortschritt(null); abbruch.current = null; if (meldung) zeige(meldung); };
+    try {
+      const r = await fetch("/api/ki/fallaufnahme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: ctrl.signal });
+      if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); return fertig(j.fehler ?? "KI-Fehler"); }
+      const leser = r.body.getReader(), dec = new TextDecoder();
+      let puffer = "";
+      for (;;) {
+        const { done, value } = await leser.read();
+        if (done) break;
+        puffer += dec.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = puffer.indexOf("\n")) >= 0) {
+          const ev = JSON.parse(puffer.slice(0, nl)); puffer = puffer.slice(nl + 1);
+          if (ev.typ === "status") {
+            const t = ev.schritt === "pseudonym" ? `Pseudonymisiere … ${ev.ersetzt} Angaben ersetzt`
+              : ev.schritt === "laden" ? "Modell lädt (beim ersten Mal bis zu 1 Minute) …"
+              : `KI schreibt … ${ev.felder} von ${ev.gesamt} Feldern`;
+            setKiFortschritt((f) => ({ text: t, anteil: ev.schritt === "schreiben" ? ev.felder / ev.gesamt : null, sek: f?.sek ?? 0 }));
+          } else if (ev.typ === "ergebnis") {
+            setKi({ text, werte: ev.werte, belege: ev.belege, ersetzt: ev.ersetzt });
+            return fertig(`KI-Auswertung fertig · ${ev.ersetzt} Angaben vorher pseudonymisiert`);
+          } else if (ev.typ === "fehler") {
+            return fertig(ev.fehler === "abgebrochen" ? "KI-Auswertung abgebrochen" : ev.fehler);
+          }
+        }
+      }
+      fertig("KI-Verbindung unterbrochen");
+    } catch {
+      fertig(ctrl.signal.aborted ? "KI-Auswertung abgebrochen" : "KI nicht erreichbar");
+    }
   };
 
   const erkannt = useMemo(() => erkenne(text), [text]);
@@ -62,6 +94,7 @@ export default function Fallaufnahme() {
     const h = (e: KeyboardEvent) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); anlegen(); }
       if (e.key.toLowerCase() === "k" && e.altKey) { e.preventDefault(); kiAuswerten(); }
+      if (e.key === "Escape" && abbruch.current) { e.preventDefault(); kiAbbrechen(); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -90,10 +123,14 @@ export default function Fallaufnahme() {
           style={{ flex: 1, minHeight: 260, fontSize: 15, lineHeight: 1.7, padding: "14px 16px", resize: "none" }}
         />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button className="btn" disabled={!text.trim() || kiLaeuft || !kiStatus?.aktiv} onClick={kiAuswerten}
+          {kiLaeuft ? (
+            <button className="btn" onClick={kiAbbrechen}>Abbrechen <span className="k">Esc</span></button>
+          ) : (
+          <button className="btn" disabled={!text.trim() || !kiStatus?.aktiv} onClick={kiAuswerten}
             title={!kiStatus?.aktiv ? "KI in den Einstellungen einschalten" : kiStatus.ok ? "Lokal, Namen und Kontaktdaten werden vorher ersetzt" : kiStatus.fehler}>
-            {kiLaeuft ? "KI wertet aus …" : "Mit KI auswerten"} <span className="k">Alt+K</span>
+            Mit KI auswerten <span className="k">Alt+K</span>
           </button>
+          )}
           <span className="lab">
             {!kiStatus ? "" : !kiStatus.aktiv ? "KI aus – regelbasierte Erkennung" : kiStatus.ok ? "KI lokal bereit" : `KI: ${kiStatus.fehler}`}
             {ki && !kiAktuell ? " · Text geändert – KI erneut auswerten" : ""}
@@ -101,6 +138,21 @@ export default function Fallaufnahme() {
           <div style={{ flex: 1 }} />
           <span className="lab">Strg+Enter = Akte anlegen</span>
         </div>
+        {kiFortschritt && (
+          <div>
+            <div style={{ display: "flex", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
+              <span>{kiFortschritt.text}</span><div style={{ flex: 1 }} /><span className="mono">{kiFortschritt.sek} s</span>
+            </div>
+            <div style={{ height: 3, background: "var(--line2)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", background: "var(--akzent)", borderRadius: 2, transition: "width .3s",
+                width: kiFortschritt.anteil === null ? "30%" : `${Math.max(4, kiFortschritt.anteil * 100)}%`,
+                animation: kiFortschritt.anteil === null ? "kiWarten 1.4s ease-in-out infinite" : undefined,
+              }} />
+            </div>
+            <style>{"@keyframes kiWarten{0%{margin-left:-30%}100%{margin-left:100%}}"}</style>
+          </div>
+        )}
         {offen.length > 0 && (
           <div>
             <div className="th" style={{ color: "#B5620A" }}>Fehlt noch – am besten jetzt am Telefon fragen</div>
