@@ -41,7 +41,7 @@ export default function PortalVerwaltung() {
   return (
     <div className="main">
       <div style={{ flex: 1, minWidth: 0, padding: "18px 24px", overflow: "auto", borderRight: "1px solid var(--line)" }}>
-        <div className="head"><div><h1>Mandantenportal</h1><div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Mandanten sehen nur, was hier freigegeben ist · nur lesen · Zugang per persönlichem Link</div></div></div>
+        <div className="head" style={{ padding: "0 0 12px" }}><div><h1>Mandantenportal</h1><div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Mandanten sehen nur, was hier freigegeben ist · nur lesen · Zugang per persönlichem Link</div></div></div>
         <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
           <thead><tr>{["Akte", "Mandant", "Zugang", "Zuletzt aktiv", "Offene Aufgaben"].map((h) => <th key={h} className="th" style={{ ...td, textAlign: "left", background: "#fafbfc" }}>{h}</th>)}</tr></thead>
           <tbody>

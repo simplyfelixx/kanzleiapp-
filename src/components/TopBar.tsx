@@ -82,7 +82,7 @@ export default function TopBar() {
             {n.href === "/eingang" && offenEingang > 0 && <b> {offenEingang}</b>}
           </Link>
         ))}
-        <span style={{ position: "relative" }}>
+        <span style={{ position: "relative", display: "flex" }}>
           <a href="#" onClick={(e) => { e.preventDefault(); setMehr(!mehr); }} className={mehrNav.some((n) => aktiv(n.href)) ? "on" : ""}>Mehr ▾</a>
           {mehr && (
             <div style={{ position: "absolute", top: 30, left: 0, background: "#fff", border: "1px solid #c9ccd1", borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,.14)", padding: "4px 0", zIndex: 50, minWidth: 220 }}>
