@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, naechstesAz } from "@/lib/db";
+import { db, naechstesAz, plusTage, verlaufEintrag } from "@/lib/db";
 import type { Erkannt } from "@/lib/erkennung";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,15 @@ export async function POST(req: Request) {
     ins.run(id, "Mandant", w.mandant, w.telefon ?? "", w.email ?? "", w.adresse ?? "", "", b.notiz ? `Fallaufnahme: ${String(b.notiz).slice(0, 2000)}` : "");
     if (w.gegner || w.kennzeichen) ins.run(id, "Gegner", w.gegner ?? "", "", "", "", w.kennzeichen ?? "", "");
     if (w.versicherung) ins.run(id, "Versicherung", w.versicherung, "", "", "", "", "");
+    verlaufEintrag(id, "Akte aus Fallaufnahme angelegt", "FK");
+    // Erster Vorgang für „Mein Tag“: Vollmacht und erste Schreiben vorbereiten
+    d.prepare(`INSERT INTO vorgaenge (akte_id,prioritaet,titel,zusammenfassung,felder,aktion,wirkung) VALUES (?,?,?,?,?,?,?)`).run(
+      id, "pruefen", "Neue Akte – Vollmacht und erste Schreiben vorbereitet",
+      `Neue Akte ${titel}. Vorbereitet: ${naechster || "Vollmacht + Fragebogen an Mandant"}.`,
+      JSON.stringify([{ label: "Mandant", wert: w.mandant, quelle: "Fallaufnahme" }, { label: "Versicherung", wert: w.versicherung || "–", quelle: "Fallaufnahme" }]),
+      "Bestätigen & senden",
+      JSON.stringify({ wv: { tage: 7, titel: "Vollmacht und Fragebogen zurück?" }, verlauf: "Vollmacht + Fragebogen an Mandant versandt", prioritaet: "wartet" }));
+    d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer) VALUES (?,?,?,?,?)").run(id, "wv", plusTage(1), "Neue Akte prüfen", "FK");
   })();
   return NextResponse.json({ id });
 }

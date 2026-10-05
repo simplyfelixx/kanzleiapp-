@@ -3,7 +3,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-import { akten as beispielAkten } from "./data";
+import { akten as beispielAkten, vorgaenge as beispielVorgaenge, eingang as beispielEingang } from "./data";
 
 export interface AkteRow {
   id: string;
@@ -40,6 +40,9 @@ export interface KontoRow {
   gezahlt: number;
   quelle: string;
 }
+
+export interface FristRow { id: number; akte_id: string; art: "wv" | "frist"; datum: string; titel: string; wer: string; status: string; bestaetigt: number; quelle: string }
+export interface VerlaufRow { id: number; akte_id: string; zeit: string; text: string; wer: string }
 
 export const FALLFELDER: { key: string; label: string }[] = [
   { key: "unfalltag", label: "Unfalltag" },
@@ -85,9 +88,34 @@ function open(): Database.Database {
       position TEXT NOT NULL, gefordert REAL NOT NULL DEFAULT 0, gezahlt REAL NOT NULL DEFAULT 0,
       quelle TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS vorgaenge (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, akte_id TEXT NOT NULL REFERENCES akten(id) ON DELETE CASCADE,
+      prioritaet TEXT NOT NULL DEFAULT 'pruefen', titel TEXT NOT NULL, zusammenfassung TEXT NOT NULL DEFAULT '',
+      felder TEXT NOT NULL DEFAULT '[]', entwurf TEXT, aktion TEXT NOT NULL DEFAULT 'Bestätigen',
+      wirkung TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'offen',
+      erstellt TEXT NOT NULL DEFAULT (datetime('now')), erledigt_am TEXT
+    );
+    CREATE TABLE IF NOT EXISTS eingang (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, quelle TEXT NOT NULL, zeit TEXT NOT NULL DEFAULT '', typ TEXT NOT NULL,
+      absender TEXT NOT NULL DEFAULT '', akte_id TEXT, sicher INTEGER NOT NULL DEFAULT 0, erkannt TEXT NOT NULL DEFAULT '',
+      dateiname TEXT NOT NULL DEFAULT '', felder TEXT NOT NULL DEFAULT '[]', folgeaktionen TEXT NOT NULL DEFAULT '[]',
+      vorschau TEXT NOT NULL DEFAULT '', wirkung TEXT NOT NULL DEFAULT '{}', status TEXT NOT NULL DEFAULT 'offen',
+      erledigt_am TEXT
+    );
+    CREATE TABLE IF NOT EXISTS fristen (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, akte_id TEXT NOT NULL REFERENCES akten(id) ON DELETE CASCADE,
+      art TEXT NOT NULL DEFAULT 'wv', datum TEXT NOT NULL, titel TEXT NOT NULL, wer TEXT NOT NULL DEFAULT 'FK',
+      status TEXT NOT NULL DEFAULT 'offen', bestaetigt INTEGER NOT NULL DEFAULT 1, quelle TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS verlauf (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, akte_id TEXT NOT NULL REFERENCES akten(id) ON DELETE CASCADE,
+      zeit TEXT NOT NULL DEFAULT (datetime('now','localtime')), text TEXT NOT NULL, wer TEXT NOT NULL DEFAULT ''
+    );
   `);
   const n = (db.prepare("SELECT COUNT(*) c FROM akten").get() as { c: number }).c;
   if (n === 0) seed(db);
+  const v = (db.prepare("SELECT COUNT(*) c FROM eingang").get() as { c: number }).c;
+  if (v === 0 && !(db.prepare("SELECT 1 FROM verlauf LIMIT 1").get())) seedWorkflow(db);
   return db;
 }
 
@@ -144,6 +172,8 @@ export function akteLaden(id: string) {
     akte,
     beteiligte: d.prepare("SELECT * FROM beteiligte WHERE akte_id=? ORDER BY id").all(id) as BeteiligterRow[],
     konto: d.prepare("SELECT * FROM konto WHERE akte_id=? ORDER BY id").all(id) as KontoRow[],
+    fristen: d.prepare("SELECT * FROM fristen WHERE akte_id=? AND status='offen' ORDER BY datum").all(id) as FristRow[],
+    verlauf: d.prepare("SELECT * FROM verlauf WHERE akte_id=? ORDER BY zeit DESC, id DESC LIMIT 50").all(id) as VerlaufRow[],
   };
 }
 export function naechstesAz(): string {
@@ -151,4 +181,82 @@ export function naechstesAz(): string {
   const rows = db().prepare("SELECT id FROM akten WHERE id LIKE ?").all(`%/${jahr}`) as { id: string }[];
   const max = rows.reduce((m, r) => Math.max(m, parseInt(r.id) || 0), 0);
   return `${max + 1}/${jahr}`;
+}
+
+// ---- Datumshilfen (ISO yyyy-mm-dd, lokale Zeit) ----
+export function isoTag(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+export function plusTage(tage: number, ab = new Date()) {
+  const d = new Date(ab); d.setDate(d.getDate() + tage);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); // nie aufs Wochenende
+  return isoTag(d);
+}
+
+/** Wirkungen, die beim Bestätigen eines Vorgangs/Dokuments ausgeführt werden. */
+export interface Wirkung {
+  konto?: { position: string; gefordert?: number; gezahlt?: number }[];
+  wv?: { tage: number; titel: string };
+  frist?: { tage: number; titel: string };
+  phase?: string;
+  prioritaet?: string;
+  verlauf?: string;
+}
+
+function seedWorkflow(db: Database.Database) {
+  const insV = db.prepare(`INSERT INTO vorgaenge (akte_id,prioritaet,titel,zusammenfassung,felder,entwurf,aktion,wirkung) VALUES (?,?,?,?,?,?,?,?)`);
+  const wirkV: Record<string, Wirkung> = {
+    "214/26": { wv: { tage: 14, titel: "Zahlungseingang HUK prüfen (Frist aus Erinnerung)" }, verlauf: "Erinnerung mit Klageandrohung an HUK versandt", prioritaet: "wartet" },
+    "198/26": { frist: { tage: 30, titel: "Verjährung Restansprüche – Klage oder Verzicht" }, verlauf: "An Anwalt übergeben: Verjährung prüfen" },
+    "221/26": { wv: { tage: 14, titel: "Antwort Allianz auf Nachforderung Wertminderung" }, verlauf: "Nachforderung Wertminderung 800 € an Allianz versandt", prioritaet: "wartet" },
+    "230/26": { konto: [{ position: "Reparatur netto", gefordert: 5410 }, { position: "Wertminderung", gefordert: 450 }, { position: "Nutzungsausfall", gefordert: 325 }, { position: "Gutachterkosten", gefordert: 690 }], verlauf: "Gutachten-Werte ins Aktenkonto übernommen", phase: "Anspruch" },
+  };
+  for (const v of beispielVorgaenge)
+    insV.run(v.akteId, v.prioritaet, v.titel, v.zusammenfassung, JSON.stringify(v.felder), v.entwurf ?? null, v.aktion, JSON.stringify(wirkV[v.akteId] ?? {}));
+
+  const insE = db.prepare(`INSERT INTO eingang (quelle,zeit,typ,absender,akte_id,sicher,erkannt,dateiname,felder,folgeaktionen,vorschau,wirkung) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const wirkE: Record<string, Wirkung> = {
+    e1: { verlauf: "Abrechnungsschreiben HUK eingegangen: Kürzung 720 €, Nutzungsausfall abgelehnt", wv: { tage: 7, titel: "Nachforderung Verbringung/UPE vorbereiten" }, prioritaet: "woche" },
+    e2: { konto: [{ position: "Reparatur", gefordert: 6300 }], verlauf: "Reparaturrechnung Autohaus Nord eingegangen (6.300 €)" },
+    e3: { verlauf: "Mandantin hat Fotos und Führerschein im Portal hochgeladen" },
+    e4: { verlauf: "Ermittlungsakte PK 26 eingegangen" },
+    e5: { verlauf: "Schreiben (Scan) zugeordnet" },
+  };
+  for (const e of beispielEingang) {
+    const akte = e.akteId && db.prepare("SELECT 1 FROM akten WHERE id=?").get(e.akteId) ? e.akteId : null;
+    insE.run(e.quelle, e.zeit, e.typ, e.absender, akte, e.sicher && akte ? 1 : 0, e.erkannt, e.dateiname, JSON.stringify(e.felder), JSON.stringify(e.folgeaktionen), e.vorschau, JSON.stringify(wirkE[e.id] ?? {}));
+  }
+
+  const insF = db.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer,bestaetigt,quelle) VALUES (?,?,?,?,?,?,?)");
+  insF.run("214/26", "wv", plusTage(0), "Nachfrist HUK abgelaufen – Erinnerung bereit", "FK", 1, "");
+  insF.run("198/26", "frist", plusTage(0), "Verjährung Restansprüche zum 31.12. – Anwalt prüfen", "RA KN", 1, "");
+  insF.run("233/26", "frist", plusTage(2), "Berufungsbegründung", "RA KN", 1, "");
+  insF.run("230/26", "wv", plusTage(3), "Antwort DEVK zur Haftungsfrage", "FK", 1, "");
+  insF.run("221/26", "wv", plusTage(1), "Zahlung Reparaturrechnung prüfen", "AS", 1, "");
+  insF.run("230/26", "frist", plusTage(21), "Stellungnahmefrist aus Schreiben AG Harburg (2 Wochen ab Zustellung)", "", 0, "KI: Schreiben AG Harburg, S. 1");
+  const insL = db.prepare("INSERT INTO verlauf (akte_id,zeit,text,wer) VALUES (?,?,?,?)");
+  insL.run("214/26", "2026-08-15 10:12", "Akte aus Erstanruf angelegt", "FK");
+  insL.run("214/26", "2026-08-20 09:40", "Gutachten ausgelesen, 4 Positionen übernommen", "KI · bestätigt FK");
+  insL.run("214/26", "2026-08-25 14:05", "Anspruchsschreiben an HUK per beA", "FK");
+  insL.run("214/26", "2026-09-28 08:30", "Zahlung 3.400 € im Kontoauszug abgeglichen", "AS");
+}
+
+/** Führt die Wirkung aus (Aktenkonto, Wiedervorlage, Frist, Phase, Verlauf). */
+export function wirkungAusfuehren(akteId: string, w: Wirkung, wer = "FK") {
+  const d = db();
+  for (const k of w.konto ?? []) {
+    const row = d.prepare("SELECT id FROM konto WHERE akte_id=? AND position=?").get(akteId, k.position) as { id: number } | undefined;
+    if (row) {
+      if (k.gefordert != null) d.prepare("UPDATE konto SET gefordert=? WHERE id=?").run(k.gefordert, row.id);
+      if (k.gezahlt != null) d.prepare("UPDATE konto SET gezahlt=? WHERE id=?").run(k.gezahlt, row.id);
+    } else d.prepare("INSERT INTO konto (akte_id,position,gefordert,gezahlt,quelle) VALUES (?,?,?,?,?)").run(akteId, k.position, k.gefordert ?? 0, k.gezahlt ?? 0, "aus Vorgang");
+  }
+  if (w.wv) d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer) VALUES (?,?,?,?,?)").run(akteId, "wv", plusTage(w.wv.tage), w.wv.titel, wer);
+  if (w.frist) d.prepare("INSERT INTO fristen (akte_id,art,datum,titel,wer,bestaetigt,quelle) VALUES (?,?,?,?,?,?,?)").run(akteId, "frist", plusTage(w.frist.tage), w.frist.titel, "", 0, "aus Vorgang");
+  if (w.phase) d.prepare("UPDATE akten SET phase=? WHERE id=?").run(w.phase, akteId);
+  if (w.prioritaet) d.prepare("UPDATE akten SET prioritaet=? WHERE id=?").run(w.prioritaet, akteId);
+  if (w.verlauf) verlaufEintrag(akteId, w.verlauf, wer);
+}
+export function verlaufEintrag(akteId: string, text: string, wer = "") {
+  db().prepare("INSERT INTO verlauf (akte_id,text,wer) VALUES (?,?,?)").run(akteId, text, wer);
 }

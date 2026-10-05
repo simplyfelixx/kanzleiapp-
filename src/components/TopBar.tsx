@@ -3,7 +3,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useStore } from "./Store";
-import { eingang } from "@/lib/data";
 
 const gebiete = ["Alle", "VR", "StR", "ArbR"] as const;
 const gebietName: Record<string, string> = { Alle: "Alle", VR: "Verkehr", StR: "Straf", ArbR: "Arbeit" };
@@ -13,7 +12,7 @@ const hauptNav = [
   { href: "/eingang", label: "Eingang", key: "F4" },
   { href: "/akten", label: "Akten" },
   { href: "/mail", label: "Mail" },
-  { href: "/fristen", label: "Fristen" },
+  { href: "/fristen", label: "Fristen", key: "F6" },
   { href: "/abrechnung", label: "Abrechnung" },
   { href: "/adressbuch", label: "Adressbuch" },
 ];
@@ -32,9 +31,11 @@ const mehrNav = [
 export default function TopBar() {
   const path = usePathname();
   const router = useRouter();
-  const { gebiet, setGebiet, erledigt } = useStore();
+  const { gebiet, setGebiet, toast } = useStore();
   const [mehr, setMehr] = useState(false);
-  const offenEingang = eingang.filter((e) => !erledigt.has(e.id)).length;
+  const [offenEingang, setOffenEingang] = useState(0);
+  // Zähler für den Eingang neu laden, wenn sich die Seite ändert oder etwas bestätigt wurde
+  useEffect(() => { fetch("/api/eingang").then((r) => r.json()).then((d) => setOffenEingang(Array.isArray(d) ? d.length : 0)).catch(() => {}); }, [path, toast]);
 
   // F2 Suche (später), F3 Fallaufnahme, F4 Eingang, F5 Mein Tag
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function TopBar() {
       if (e.key === "F3") { e.preventDefault(); router.push("/fallaufnahme"); }
       if (e.key === "F4") { e.preventDefault(); router.push("/eingang"); }
       if (e.key === "F5") { e.preventDefault(); router.push("/"); }
+      if (e.key === "F6") { e.preventDefault(); router.push("/fristen"); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);

@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { euro, prioFarbe, Prioritaet } from "@/lib/data";
 import { useStore } from "@/components/Store";
-import type { AkteRow, BeteiligterRow, KontoRow } from "@/lib/db";
+import type { AkteRow, BeteiligterRow, KontoRow, FristRow, VerlaufRow } from "@/lib/db";
 
 // Felder und Rollen hier statt aus db.ts, damit kein Server-Code im Browser landet
 const FALLFELDER = [
@@ -17,7 +17,8 @@ const ROLLEN = ["Mandant", "Gegner", "Versicherung", "Werkstatt", "Gutachter", "
 const PHASEN = ["Mandat", "Unterlagen", "Anspruch", "Prüffrist", "Kürzung", "Klage", "Abschluss"];
 const PRIOS: [Prioritaet, string][] = [["heute", "Heute"], ["woche", "Diese Woche"], ["pruefen", "Prüfen"], ["wartet", "Wartet"], ["laeuft", "Läuft"]];
 
-type Daten = { akte: AkteRow; beteiligte: BeteiligterRow[]; konto: KontoRow[] };
+type Daten = { akte: AkteRow; beteiligte: BeteiligterRow[]; konto: KontoRow[]; fristen: FristRow[]; verlauf: VerlaufRow[] };
+const de = (s: string) => s.slice(0, 10).split("-").reverse().join(".");
 const leer = (rolle: string): Partial<BeteiligterRow> => ({ rolle, name: "", adresse: "", telefon: "", email: "", iban: "", ansprechpartner: "", zeichen: "", vorsteuer: 0, notiz: "" });
 
 export default function AktePage() {
@@ -28,6 +29,7 @@ export default function AktePage() {
   const [fehlt, setFehlt] = useState(false);
   const [panel, setPanel] = useState<Partial<BeteiligterRow> | null>(null);
   const [fallEdit, setFallEdit] = useState<Record<string, string> | null>(null);
+  const [wv, setWv] = useState({ art: "wv", tage: 7, titel: "" });
 
   useEffect(() => {
     fetch(`/api/akten/${encodeURIComponent(az)}`).then(async (r) => (r.ok ? setD(await r.json()) : setFehlt(true)));
@@ -44,6 +46,18 @@ export default function AktePage() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
+
+  const neuladen = () => fetch(`/api/akten/${encodeURIComponent(az)}`).then((r) => r.json()).then(setD);
+  const wvAnlegen = async () => {
+    if (!wv.titel.trim()) return zeige("Worum geht es?");
+    const datum = new Date(Date.now() + wv.tage * 864e5);
+    const r = await fetch("/api/fristen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ akteId: az, art: wv.art, titel: wv.titel, wer: "FK", datum: `${datum.getFullYear()}-${String(datum.getMonth() + 1).padStart(2, "0")}-${String(datum.getDate()).padStart(2, "0")}` }) });
+    if (r.ok) { zeige(wv.art === "frist" ? "Frist notiert" : "Wiedervorlage gesetzt"); setWv({ ...wv, titel: "" }); neuladen(); }
+  };
+  const fristAktion = async (id: number, aktion: string, tage?: number) => {
+    await fetch(`/api/fristen/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktion, tage }) });
+    zeige(aktion === "erledigt" ? "Erledigt" : aktion === "bestaetigen" ? "Bestätigt" : "Verschoben"); neuladen();
+  };
 
   if (fehlt) return <div className="empty">Akte {az} nicht gefunden. <Link href="/akten">Zur Aktenliste</Link></div>;
   if (!d) return <div className="empty">Lade Akte …</div>;
@@ -138,6 +152,41 @@ export default function AktePage() {
               <div className="fr" key={k} style={{ gridTemplateColumns: "150px 1fr" }}>
                 <span className="lab">{l}</span>
                 <span style={{ color: fall[k] ? undefined : "var(--muted)" }}>{fall[k] || "–"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
+          {/* Fristen & Wiedervorlagen */}
+          <div>
+            <div className="th">Fristen &amp; Wiedervorlagen</div>
+            {d.fristen.length === 0 && <div className="lab" style={{ padding: "8px 0" }}>Keine offenen Fristen oder Wiedervorlagen.</div>}
+            {d.fristen.map((f) => (
+              <div key={f.id} className="fr" style={{ gridTemplateColumns: "80px 50px 1fr auto", background: f.bestaetigt ? undefined : "#fffbea" }}>
+                <span className="mono" style={{ fontSize: 12 }}>{de(f.datum)}</span>
+                <span className="k" style={{ color: f.art === "frist" ? "var(--rot)" : undefined, justifySelf: "start" }}>{f.art === "frist" ? "Frist" : "WV"}</span>
+                <span>{f.titel}{!f.bestaetigt && <span className="lab"> · von KI erkannt</span>}</span>
+                <span style={{ display: "flex", gap: 4 }}>
+                  {f.bestaetigt ? <button className="btn" style={{ padding: "2px 8px" }} onClick={() => fristAktion(f.id, "erledigt")}>Erledigt</button>
+                    : <button className="btn pri" style={{ padding: "2px 8px" }} onClick={() => fristAktion(f.id, "bestaetigen")}>Bestätigen</button>}
+                  <button className="btn" style={{ padding: "2px 8px" }} onClick={() => fristAktion(f.id, "verschieben", 7)}>+7</button>
+                </span>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+              <select className="feld" value={wv.art} onChange={(e) => setWv({ ...wv, art: e.target.value })}><option value="wv">WV</option><option value="frist">Frist</option></select>
+              <select className="feld" value={wv.tage} onChange={(e) => setWv({ ...wv, tage: Number(e.target.value) })}>{[1, 3, 7, 14, 28].map((t) => <option key={t} value={t}>in {t} T.</option>)}</select>
+              <input className="feld" style={{ flex: 1 }} placeholder="Worum geht es? (Enter)" value={wv.titel} onChange={(e) => setWv({ ...wv, titel: e.target.value })} onKeyDown={(e) => e.key === "Enter" && wvAnlegen()} />
+            </div>
+          </div>
+          {/* Verlauf */}
+          <div>
+            <div className="th">Verlauf</div>
+            {d.verlauf.length === 0 && <div className="lab" style={{ padding: "8px 0" }}>Noch keine Einträge.</div>}
+            {d.verlauf.map((v) => (
+              <div key={v.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 8, padding: "5px 0", fontSize: 13, borderBottom: "1px solid var(--line2)" }}>
+                <span className="mono lab" style={{ fontSize: 12 }}>{de(v.zeit)}</span>
+                <span>{v.text}{v.wer && <span className="lab"> · {v.wer}</span>}</span>
               </div>
             ))}
           </div>

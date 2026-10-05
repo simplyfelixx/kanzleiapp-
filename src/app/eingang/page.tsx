@@ -1,94 +1,92 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { akten, eingang, Quelle } from "@/lib/data";
+import Link from "next/link";
 import { useStore } from "@/components/Store";
 import { useListKeys } from "@/components/useListKeys";
 
-const quellen: (Quelle | "Alle" | "Unklar")[] = ["Alle", "MAIL", "beA", "SCAN", "PORTAL", "Unklar"];
+type Dok = { id: number; quelle: string; zeit: string; typ: string; absender: string; akte_id: string | null; akte_titel: string | null; akte_phase: string | null; sicher: number; erkannt: string; dateiname: string; felder: string; folgeaktionen: string; vorschau: string };
+type AkteKurz = { id: string; titel: string };
+const filterListe = ["Alle", "MAIL", "beA", "SCAN", "PORTAL", "Unklar"] as const;
+const label: Record<string, string> = { Alle: "Alle", MAIL: "Mail", beA: "beA", SCAN: "Scan", PORTAL: "Portal", Unklar: "Unklar" };
 
 export default function Eingang() {
-  const { erledigt, erledigen, zeige } = useStore();
-  const [filter, setFilter] = useState<(typeof quellen)[number]>("Alle");
-  const [auswahl, setAuswahl] = useState<Set<string>>(new Set());
-  const [zuordnung, setZuordnung] = useState<Record<string, string>>({});
+  const { zeige } = useStore();
+  const [doks, setDoks] = useState<Dok[] | null>(null);
+  const [akten, setAkten] = useState<AkteKurz[]>([]);
+  const [filter, setFilter] = useState<(typeof filterListe)[number]>("Alle");
+  const [auswahl, setAuswahl] = useState<Set<number>>(new Set());
+  const [zuordnung, setZuordnung] = useState<Record<number, string>>({});
 
-  const offen = eingang.filter((e) => !erledigt.has(e.id));
-  const liste = useMemo(
-    () =>
-      offen.filter((e) =>
-        filter === "Alle" ? true : filter === "Unklar" ? !e.sicher : e.quelle === filter
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [erledigt, filter]
-  );
+  const laden = useCallback(() => fetch("/api/eingang").then((r) => r.json()).then(setDoks), []);
+  useEffect(() => { laden(); fetch("/api/akten").then((r) => r.json()).then(setAkten); }, [laden]);
+
+  const liste = useMemo(() => (doks ?? []).filter((e) => (filter === "Alle" ? true : filter === "Unklar" ? !e.sicher : e.quelle === filter)), [doks, filter]);
   const [idx, setIdx] = useState(0);
   useEffect(() => { if (idx > liste.length - 1) setIdx(Math.max(0, liste.length - 1)); }, [liste.length, idx]);
   const d = liste[idx];
-  const akteId = d ? zuordnung[d.id] ?? d.akteId : null;
-  const akte = akten.find((a) => a.id === akteId);
+  const akteId = d ? zuordnung[d.id] ?? d.akte_id : null;
 
-  const bestaetigen = useCallback(() => {
+  const aktion = async (dok: Dok, art: "bestaetigen" | "verwerfen", akte?: string | null) => {
+    const r = await fetch(`/api/eingang/${dok.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktion: art, akteId: akte }) });
+    const j = await r.json();
+    return r.ok ? null : j.fehler ?? "Fehler";
+  };
+  const bestaetigen = useCallback(async () => {
     if (!d) return;
-    if (!akteId) { zeige("Bitte zuerst eine Akte wählen"); return; }
-    erledigen([d.id]);
-    zeige(`${d.typ} → ${akteId} abgelegt · ${d.folgeaktionen.length} Folgeaktionen vorbereitet`);
-  }, [d, akteId, erledigen, zeige]);
+    const f = await aktion(d, "bestaetigen", akteId);
+    if (f) return zeige(f);
+    zeige(`${d.typ} → ${akteId} abgelegt · Akte aktualisiert`);
+    laden();
+  }, [d, akteId]); // eslint-disable-line react-hooks/exhaustive-deps
   useListKeys(liste.length, idx, setIdx, bestaetigen);
 
-  const toggle = (id: string) =>
-    setAuswahl((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const sammelBestaetigen = () => {
-    const ids = Array.from(auswahl).filter((id) => {
-      const e = eingang.find((x) => x.id === id)!;
-      return e.sicher || zuordnung[id];
-    });
-    erledigen(ids);
+  const toggle = (id: number) => setAuswahl((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const sammel = async () => {
+    let ok = 0, offen = 0;
+    for (const id of Array.from(auswahl)) {
+      const dok = (doks ?? []).find((x) => x.id === id);
+      if (!dok) continue;
+      const a = zuordnung[id] ?? dok.akte_id;
+      if (!a) { offen++; continue; }
+      if (!(await aktion(dok, "bestaetigen", a))) ok++;
+    }
     setAuswahl(new Set());
-    zeige(`${ids.length} Dokumente bestätigt`);
+    zeige(`${ok} bestätigt${offen ? ` · ${offen} ohne Akte übersprungen` : ""}`);
+    laden();
   };
+
+  if (!doks) return <div className="empty">Lade …</div>;
+  const felder: { label: string; wert: string; quelle: string }[] = d ? JSON.parse(d.felder || "[]") : [];
+  const folge: string[] = d ? JSON.parse(d.folgeaktionen || "[]") : [];
 
   return (
     <>
       <div className="head">
         <div>
           <h1>Eingang</h1>
-          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>
-            {offen.length} neu · {offen.filter((e) => e.sicher).length} sicher zugeordnet · {offen.filter((e) => !e.sicher).length} brauchen dich
-          </div>
+          <div className="lab" style={{ fontSize: 13, marginTop: 2 }}>{doks.length} neu · {doks.filter((e) => e.sicher).length} sicher zugeordnet · {doks.filter((e) => !e.sicher).length} brauchen dich</div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          {quellen.map((q) => (
-            <span key={q} className={"chip" + (filter === q ? " on" : "")} onClick={() => { setFilter(q); setIdx(0); }}>
-              {q === "Alle" ? "Alle" : q === "Unklar" ? "Unklar" : q === "MAIL" ? "Mail" : q === "SCAN" ? "Scan" : q === "PORTAL" ? "Portal" : q}
-            </span>
-          ))}
+          {filterListe.map((q) => <span key={q} className={"chip" + (filter === q ? " on" : "")} onClick={() => { setFilter(q); setIdx(0); }}>{label[q]}</span>)}
         </div>
       </div>
       <div className="main">
         <div style={{ width: 500, borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", overflow: "auto" }}>
           {auswahl.size > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)", background: "var(--akzent-bg)", fontSize: 12 }}>
-              <b>{auswahl.size} ausgewählt</b>
-              <div style={{ flex: 1 }} />
-              <button className="btn" onClick={() => zeige("Umbenannt nach Schema")}>Umbenennen</button>
-              <button className="btn pri" onClick={sammelBestaetigen}>Alle bestätigen</button>
+              <b>{auswahl.size} ausgewählt</b><div style={{ flex: 1 }} />
+              <button className="btn" onClick={() => setAuswahl(new Set())}>Auswahl aufheben</button>
+              <button className="btn pri" onClick={sammel}>Alle bestätigen</button>
             </div>
           )}
           {liste.length === 0 && <div className="empty">Eingang leer.</div>}
           {liste.map((e, i) => (
-            <div
-              key={e.id}
-              className={"row" + (i === idx ? " sel" : "")}
-              style={{ gridTemplateColumns: "16px 56px 1fr 70px", padding: "11px 16px", alignItems: "start" }}
-              onClick={() => setIdx(i)}
-            >
+            <div key={e.id} className={"row" + (i === idx ? " sel" : "")} style={{ gridTemplateColumns: "16px 56px 1fr 70px", padding: "11px 16px", alignItems: "start" }} onClick={() => setIdx(i)}>
               <span className={"cb" + (auswahl.has(e.id) ? " on" : "")} onClick={(ev) => { ev.stopPropagation(); toggle(e.id); }}>{auswahl.has(e.id) ? "✓" : ""}</span>
               <span className="mono" style={{ fontSize: 10, textAlign: "center", border: "1px solid #d5d8dc", borderRadius: 3, color: e.quelle === "beA" ? "var(--akzent)" : "#3a3f47" }}>{e.quelle}</span>
               <div>
                 <div style={{ fontWeight: 500 }}>{e.typ}</div>
-                <div className="lab" style={{ fontSize: 12 }}>
-                  {e.absender} → {e.akteId ? <span className="mono">{e.akteId}</span> : <span style={{ color: "#B5620A" }}>Akte unklar</span>}
-                </div>
+                <div className="lab" style={{ fontSize: 12 }}>{e.absender} → {(zuordnung[e.id] ?? e.akte_id) ? <span className="mono">{zuordnung[e.id] ?? e.akte_id}</span> : <span style={{ color: "#B5620A" }}>Akte unklar</span>}</div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div className="lab mono">{e.zeit}</div>
@@ -114,20 +112,15 @@ export default function Eingang() {
             <div>
               <div className="fr">
                 <span className="lab">Akte</span>
-                <select
-                  value={akteId ?? ""}
-                  onChange={(e) => setZuordnung({ ...zuordnung, [d.id]: e.target.value })}
-                  style={{ font: "inherit", fontSize: 13, padding: "3px 6px", border: "1px solid #d5d8dc", borderRadius: 4, background: akteId ? "#fff" : "var(--hl2)" }}
-                >
+                <select className="feld" value={akteId ?? ""} onChange={(ev) => setZuordnung({ ...zuordnung, [d.id]: ev.target.value })} style={{ background: akteId ? "#fff" : "var(--hl2)" }}>
                   <option value="">– Akte wählen –</option>
                   {akten.map((a) => <option key={a.id} value={a.id}>{a.id} {a.titel}</option>)}
-                  {d.akteId && !akten.find((a) => a.id === d.akteId) && <option value={d.akteId}>{d.akteId}</option>}
                 </select>
                 <span />
               </div>
               <div className="fr"><span className="lab">Dokumenttyp</span><span>{d.typ}</span><span /></div>
               <div className="fr"><span className="lab">Dateiname</span><span className="mono" style={{ fontSize: 12 }}>{d.dateiname}</span><span /></div>
-              {d.felder.map((f) => (
+              {felder.map((f) => (
                 <div className="fr" key={f.label}>
                   <span className="lab">{f.label}</span>
                   <span className="hl" style={{ justifySelf: "start" }}>{f.wert}</span>
@@ -138,14 +131,15 @@ export default function Eingang() {
             <div>
               <div className="th">Wird danach erledigt</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6, fontSize: 13 }}>
-                {d.folgeaktionen.map((f) => <div key={f} style={{ display: "flex", gap: 8 }}><span className="cb on">✓</span>{f}</div>)}
+                {folge.map((f) => <div key={f} style={{ display: "flex", gap: 8 }}><span className="cb on">✓</span>{f}</div>)}
+                <div style={{ display: "flex", gap: 8 }}><span className="cb on">✓</span>Im Verlauf der Akte ablegen</div>
               </div>
             </div>
-            {akte && <div className="lab">Akte: {akte.titel} · {akte.phase}</div>}
+            {akteId && <Link href={`/akte/${encodeURIComponent(akteId)}`} className="lab">Akte {akteId} öffnen →</Link>}
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", gap: 6 }}>
               <button className="btn pri" style={{ padding: "8px 16px", fontSize: 13 }} onClick={bestaetigen}>Bestätigen ↵</button>
-              <button className="btn" style={{ padding: "8px 12px", fontSize: 13 }} onClick={() => { erledigen([d.id]); zeige("Verworfen"); }}>Verwerfen</button>
+              <button className="btn" style={{ padding: "8px 12px", fontSize: 13 }} onClick={async () => { await aktion(d, "verwerfen"); zeige("Verworfen"); laden(); }}>Verwerfen</button>
             </div>
           </div>
         )}

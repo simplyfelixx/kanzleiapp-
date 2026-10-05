@@ -82,7 +82,7 @@ export const akten: Akte[] = [
     id: "230/26", titel: "Weber ./. DEVK", gebiet: "VR", prioritaet: "pruefen",
     mandant: "Eva Weber", mandantTel: "0176 3321 908", versicherung: "DEVK", sachbearbeiter: "Frau Ilić",
     durchwahl: "0221 757-4410", schadennummer: "DK-77812", phase: "Unterlagen",
-    konto: [{ position: "Reparatur", gefordert: 0, gezahlt: 0 }],
+    konto: [],
     stand: "Gutachten ist eingegangen und ausgelesen. Anspruchsschreiben kann vorbereitet werden.",
   },
   {
