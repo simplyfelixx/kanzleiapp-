@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const name = String(b.name ?? "").trim().slice(0, 80);
   const kuerzel = String(b.kuerzel ?? "").trim().slice(0, 4);
   const login = String(b.login ?? "").trim().slice(0, 80);
-  if (!name || !kuerzel || !login) return NextResponse.json({ fehler: "Name, Kürzel und Login angeben" }, { status: 400 });
+  if (!name || !kuerzel || !login) return NextResponse.json({ fehler: "Name, Kürzel und Benutzername angeben" }, { status: 400 });
   const pf = passwortFehler(b.passwort);
   if (pf) return NextResponse.json({ fehler: pf }, { status: 400 });
   // In einer Transaktion prüfen, damit nicht zwei Admins gleichzeitig entstehen

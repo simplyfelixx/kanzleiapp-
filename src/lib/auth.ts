@@ -69,12 +69,12 @@ export function anmelden(login: string, pw: string): { ok: true; s: Sitzung } | 
   tabellen();
   const d = db();
   const u = d.prepare("SELECT * FROM benutzer WHERE login=?").get(login) as (BenutzerRow & { hash: string; fehlversuche: number; gesperrt_bis: number }) | undefined;
-  if (!u) { hashPruefen(pw, DUMMY); return { ok: false, fehler: "Login oder Passwort falsch" }; }
+  if (!u) { hashPruefen(pw, DUMMY); return { ok: false, fehler: "Benutzername oder Passwort falsch" }; }
   if (u.gesperrt_bis > Date.now()) return { ok: false, fehler: "Zu viele Fehlversuche – bitte in einigen Minuten erneut versuchen" };
   if (!hashPruefen(pw, u.hash) || !u.aktiv) {
     const n = u.fehlversuche + 1;
     d.prepare("UPDATE benutzer SET fehlversuche=?, gesperrt_bis=? WHERE id=?").run(n >= 5 ? 0 : n, n >= 5 ? Date.now() + 5 * 60_000 : 0, u.id);
-    return { ok: false, fehler: "Login oder Passwort falsch" };
+    return { ok: false, fehler: "Benutzername oder Passwort falsch" };
   }
   d.prepare("UPDATE benutzer SET fehlversuche=0, gesperrt_bis=0, letzter_login=datetime('now','localtime') WHERE id=?").run(u.id);
   return { ok: true, s: { u: u.id, k: u.kuerzel, r: u.rolle, e: Date.now() + DAUER_MS } };

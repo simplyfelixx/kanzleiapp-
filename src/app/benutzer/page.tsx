@@ -33,7 +33,7 @@ export default function Benutzer() {
     <div className="main" style={{ padding: 20 }}>
       <div className="head"><div><h1>Benutzer</h1><div className="lab" style={{ fontSize: 13, marginTop: 2 }}>Konten und Rollen · nur für Admins</div></div></div>
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
-        <thead><tr>{["Name", "Kürzel", "Login", "Rolle", "Letzter Login", "Status", ""].map((h) => <th key={h} className="th" style={{ ...td, textAlign: "left" }}>{h}</th>)}</tr></thead>
+        <thead><tr>{["Name", "Kürzel", "Benutzername", "Rolle", "Letzter Login", "Status", ""].map((h) => <th key={h} className="th" style={{ ...td, textAlign: "left" }}>{h}</th>)}</tr></thead>
         <tbody>
           {liste.map((u) => (
             <tr key={u.id} style={{ opacity: u.aktiv ? 1 : 0.5 }}>
@@ -58,7 +58,7 @@ export default function Benutzer() {
 
       <div className="th" style={{ margin: "24px 0 8px" }}>Neuer Benutzer</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
-        {([["name", "Name", 180], ["kuerzel", "Kürzel", 70], ["login", "Login", 140], ["passwort", "Passwort", 160]] as const).map(([k, l, w]) => (
+        {([["name", "Name", 180], ["kuerzel", "Kürzel", 70], ["login", "Benutzername", 140], ["passwort", "Passwort", 160]] as const).map(([k, l, w]) => (
           <label key={k}><div className="lab">{l}</div>
             <input className="feld" style={{ width: w }} type={k === "passwort" ? "password" : "text"} autoComplete="off" value={neu[k]} onChange={(e) => setNeu({ ...neu, [k]: e.target.value })} />
           </label>

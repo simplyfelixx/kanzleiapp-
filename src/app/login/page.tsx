@@ -39,7 +39,7 @@ export default function Login() {
         <div className="lab" style={{ marginBottom: 16 }}>{einrichtung ? "Noch kein Benutzer vorhanden. Dieses Konto verwaltet später alle weiteren." : "Kanzlei Nord"}</div>
         {einrichtung && feld("name", "Name")}
         {einrichtung && feld("kuerzel", "Kürzel (z. B. FK)")}
-        {feld("login", "Login", "text", "username")}
+        {feld("login", "Benutzername", "text", "username")}
         {feld("passwort", einrichtung ? "Passwort (mind. 10 Zeichen)" : "Passwort", "password", einrichtung ? "new-password" : "current-password")}
         {einrichtung && feld("passwort2", "Passwort wiederholen", "password", "new-password")}
         {fehler && <div style={{ color: "#c0392b", fontSize: 13, marginBottom: 10 }}>{fehler}</div>}
