@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@/components/Store";
 
 type R = { id: number; nr: string; akte_id: string; akte_titel: string; datum: string; empfaenger: string; wert: number; brutto: number; status: string; bezahlt_am: string | null; dokument_id: number | null };
-type Vorschlag = { wert: number; positionen: { position: string; gefordert: number }[]; empfaenger: string; schadennummer: string; mandant: string; bisher: R[] };
-type Note = { voll: number; zeilen: { text: string; betrag: number }[]; netto: number; ust: number; ustSatz: number; brutto: number };
+type Vorschlag = { auftrag: string; tabelle: "2025" | "2021"; wert: number; positionen: { position: string; gefordert: number }[]; empfaenger: string; schadennummer: string; mandant: string; bisher: R[] };
+type Note = { nachNr: string[]; voll: number; zeilen: { text: string; betrag: number }[]; netto: number; ust: number; ustSatz: number; brutto: number };
 type AkteKurz = { id: string; titel: string };
 
 const euro = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
@@ -25,6 +25,8 @@ export default function Abrechnung() {
   const [empf, setEmpf] = useState("");
   const [note, setNote] = useState<Note | null>(null);
   const [laeuft, setLaeuft] = useState(false);
+  const [tabelle, setTabelle] = useState<"2025" | "2021">("2025");
+  const [nach, setNach] = useState<number[]>([]);
 
   const laden = useCallback(() => fetch("/api/abrechnung").then((r) => r.json()).then(setListe), []);
   useEffect(() => { laden(); fetch("/api/akten").then((r) => r.json()).then(setAkten); }, [laden]);
@@ -33,18 +35,19 @@ export default function Abrechnung() {
     if (!akte) return;
     fetch("/api/abrechnung?akte=" + encodeURIComponent(akte)).then((r) => r.json()).then((x: Vorschlag) => {
       setV(x); setWert(x.wert ? x.wert.toLocaleString("de-DE", { minimumFractionDigits: 2 }) : ""); setEmpf(x.empfaenger); setFaktor("1,3"); setEinigung(false);
+      setTabelle(x.tabelle); setNach(x.bisher.map((r) => r.id));
     });
   }, [akte]);
 
   const posten = [{ vv: "2300", faktor: zahl(faktor) }, ...(einigung ? [{ vv: "1000", faktor: 1.5 }] : [])];
-  const eingabe = { akte, wert: zahl(wert), posten, empfaenger: empf };
+  const eingabe = { akte, wert: zahl(wert), posten, empfaenger: empf, tabelle, nach };
   useEffect(() => {
     if (!akte || !(zahl(wert) > 0)) return setNote(null);
     const t = setTimeout(() => fetch("/api/abrechnung", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...eingabe, nurBerechnen: true }) })
       .then((r) => (r.ok ? r.json() : null)).then(setNote), 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [akte, wert, faktor, einigung]);
+  }, [akte, wert, faktor, einigung, tabelle, nach.join()]);
 
   const vorschau = async () => {
     const r = await fetch("/api/abrechnung/vorschau", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(eingabe) });
@@ -73,7 +76,7 @@ export default function Abrechnung() {
     <div className="main">
       <div style={{ flex: 1, minWidth: 0, padding: "18px 24px", overflow: "auto", borderRight: "1px solid var(--line)" }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 24, marginBottom: 14 }}>
-          <div><h1 style={{ fontSize: 23, margin: 0 }}>Abrechnung</h1><div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Kostennoten nach RVG (Tabelle ab 01.06.2025)</div></div>
+          <div><h1 style={{ fontSize: 23, margin: 0 }}>Abrechnung</h1><div className="lab" style={{ fontSize: 14.5, marginTop: 2 }}>Kostennoten nach RVG (Tabelle nach Auftragsdatum, auch Nachliquidation)</div></div>
           <div style={{ flex: 1 }} />
           <div style={{ textAlign: "right" }}><div className="lab">Offene Honorare</div><div className="mono" style={{ fontSize: 19, fontWeight: 600 }}>{euro(offenSumme)}</div></div>
           <div style={{ textAlign: "right" }}><div className="lab">Eingang diesen Monat</div><div className="mono" style={{ fontSize: 19, fontWeight: 600, color: "#1d7a43" }}>{euro(bezahltMonat)}</div></div>
@@ -113,7 +116,23 @@ export default function Abrechnung() {
         </select>
         {v && (
           <>
-            {v.bisher.length > 0 && <div className="lab" style={{ color: "#B5620A" }}>Schon abgerechnet: {v.bisher.map((r) => `${r.nr} (${euro(r.brutto)})`).join(", ")} – ggf. Nachliquidation nur über die Differenz.</div>}
+            {v.bisher.length > 0 && (
+              <div style={{ border: "1px solid #f0d9b5", background: "#fdf7ee", borderRadius: 6, padding: "8px 10px" }}>
+                <div className="lab" style={{ color: "#B5620A", marginBottom: 4 }}>Schon abgerechnet – angehakte Kostennoten werden angerechnet (Nachliquidation):</div>
+                {v.bisher.map((r) => (
+                  <label key={r.id} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 14.5 }}>
+                    <input type="checkbox" checked={nach.includes(r.id)} onChange={(e) => setNach(e.target.checked ? [...nach, r.id] : nach.filter((n) => n !== r.id))} />
+                    <span className="mono">{r.nr}</span> <span className="lab">Wert {euro(r.wert)} · {euro(r.brutto)} · {r.status}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <label><div className="lab">Gebührentabelle § 13 RVG <span className="q" title={`Auftrag (Akte angelegt): ${v.auftrag ? de(v.auftrag) : "?"} – maßgeblich ist der Tag der Auftragserteilung (§ 60 RVG)`}>?</span></div>
+              <select className="feld" value={tabelle} onChange={(e) => setTabelle(e.target.value as "2025" | "2021")}>
+                <option value="2025">ab 01.06.2025 (KostBRÄG 2025)</option>
+                <option value="2021">bis 31.05.2025 (Fassung 2021)</option>
+              </select>{tabelle !== v.tabelle && <span className="lab" style={{ color: "#B5620A" }}> weicht vom Auftragsdatum ab</span>}
+            </label>
             <label><div className="lab">Gegenstandswert <span title={v.positionen.map((p) => `${p.position}: ${euro(p.gefordert)}`).join("\n") || "keine Positionen im Aktenkonto"} className="q">?</span></div>
               <input className="feld mono" value={wert} onChange={(e) => setWert(e.target.value)} style={{ width: 180 }} /> <span className="lab">Summe Schadenpositionen aus dem Aktenkonto</span>
             </label>
@@ -128,7 +147,7 @@ export default function Abrechnung() {
             {note && (
               <div style={{ border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: "10px 12px", fontSize: 14.5 }}>
                 <div className="lab" style={{ marginBottom: 6 }}>1,0-Gebühr bei {euro(zahl(wert))}: {euro(note.voll)}</div>
-                {note.zeilen.map((z) => <div key={z.text} style={{ display: "flex", padding: "2px 0" }}><span style={{ flex: 1 }}>{z.text}</span><span className="mono">{euro(z.betrag)}</span></div>)}
+                {note.zeilen.map((z) => <div key={z.text} style={{ display: "flex", padding: "2px 0", color: z.betrag < 0 ? "#B5620A" : undefined }}><span style={{ flex: 1 }}>{z.text}</span><span className="mono">{euro(z.betrag)}</span></div>)}
                 <div style={{ display: "flex", padding: "4px 0 2px", borderTop: "1px solid var(--line2)", marginTop: 4 }}><span style={{ flex: 1 }}>Netto</span><span className="mono">{euro(note.netto)}</span></div>
                 <div style={{ display: "flex", padding: "2px 0" }}><span style={{ flex: 1 }}>{note.ustSatz} % USt Nr. 7008 VV</span><span className="mono">{euro(note.ust)}</span></div>
                 <div style={{ display: "flex", padding: "6px 0 0", borderTop: "1px solid var(--line)", marginTop: 4, fontWeight: 600 }}><span style={{ flex: 1 }}>Gesamt</span><span className="mono">{euro(note.brutto)}</span></div>
@@ -140,7 +159,7 @@ export default function Abrechnung() {
             <div style={{ display: "flex", gap: 6 }}>
               <button className="btn" disabled={!note} onClick={vorschau}>PDF-Vorschau</button>
               <div style={{ flex: 1 }} />
-              <button className="btn pri" disabled={!note || !empf.trim() || laeuft} onClick={erstellen}>Kostennote erstellen</button>
+              <button className="btn pri" disabled={!note || note.brutto <= 0 || !empf.trim() || laeuft} onClick={erstellen}>{note?.nachNr.length ? "Nachliquidation erstellen" : "Kostennote erstellen"}</button>
             </div>
             <div className="lab">Erstellen legt das PDF in der Akte ab und trägt die RA-Kosten ins Aktenkonto ein.</div>
           </>

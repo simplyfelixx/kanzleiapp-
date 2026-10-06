@@ -39,7 +39,8 @@ Ein Klick auf „Kanzlei“ startet den Server unsichtbar im Hintergrund (falls 
 ## Abrechnung (RVG)
 
 - Kostennote je Akte: Gegenstandswert aus den Schadenpositionen des Aktenkontos, Geschäftsgebühr Nr. 2300 (Standard 1,3), optional Einigungsgebühr Nr. 1000, Pauschale Nr. 7002, 19 % USt.
-- Gebührentabelle § 13 RVG in der Fassung ab 01.06.2025 (`src/lib/rvg.ts`).
+- Gebührentabelle § 13 RVG: Fassung ab 01.06.2025 und Fassung 2021 (Aufträge bis 31.05.2025). Vorschlag nach Anlagedatum der Akte, umstellbar (`src/lib/rvg.ts`).
+- **Nachliquidation:** Gibt es schon Kostennoten zur Akte, werden die angehakten mit ihrem Nettobetrag angerechnet (z. B. nach erhöhtem Gegenstandswert).
 - PDF-Vorschau, beim Erstellen: PDF in der Akte, RA-Kosten im Aktenkonto, Rechnungsnummer JJJJ-NNN. Zahlung erfassen oder stornieren.
 
 ## Mail
