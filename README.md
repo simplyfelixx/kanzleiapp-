@@ -17,6 +17,16 @@ Dann im Browser öffnen: http://localhost:3000
 
 Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr → Benutzer“.
 
+## Als Programm (Windows)
+
+```bash
+npm run desktop               # baut die App, legt „Kanzlei“ im Startmenü und auf dem Desktop an
+npm run desktop -- --autostart  # zusätzlich beim Windows-Start öffnen
+npm run desktop:beenden       # Hintergrund-Server stoppen
+```
+
+Ein Klick auf „Kanzlei“ startet den Server unsichtbar im Hintergrund (falls er nicht schon läuft) und öffnet ein eigenes App-Fenster (Microsoft Edge im App-Modus, ohne Adressleiste). Server-Log: `daten/server.log`. Nach einem `git pull` erneut `npm run desktop` ausführen.
+
 ## Login und Rollen
 
 - Rollen: **Admin** (Benutzer, Einstellungen, Einrichtung), **Anwalt**, **ReFa**.

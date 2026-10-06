@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "desktop": "node desktop/installieren.mjs",
+    "desktop:starten": "node desktop/starten.mjs",
+    "desktop:beenden": "node desktop/beenden.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
