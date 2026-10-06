@@ -205,7 +205,7 @@ export default function AktePage() {
       {panel && (
         <Seitenfenster titel={panel.id ? `${panel.rolle}: ${panel.name}` : "Neuer Beteiligter"} onClose={() => setPanel(null)}>
           <Feld label="Rolle"><select className="feld" value={panel.rolle} onChange={(e) => setPanel({ ...panel, rolle: e.target.value })}>{ROLLEN.map((r) => <option key={r}>{r}</option>)}</select></Feld>
-          {!["Mandant", "Fahrer", "Gegner", "Zeuge"].includes(panel.rolle ?? "") && <AusAdressbuch rolle={panel.rolle ?? ""} verknuepft={(panel as { kontakt_id?: number | null }).kontakt_id ?? null} onWahl={(k) => setPanel({ ...panel, ...k, ansprechpartner: panel.ansprechpartner, zeichen: panel.zeichen, notiz: panel.notiz })} />}
+          {!panel.id && <AusListe rolle={panel.rolle ?? ""} akte={az} verknuepft={(panel as { kontakt_id?: number | null }).kontakt_id ?? null} onWahl={(k) => setPanel({ ...panel, ...k, ansprechpartner: panel.ansprechpartner, zeichen: panel.zeichen, notiz: panel.notiz })} />}
           {([["name", "Name / Firma"], ["ansprechpartner", "Ansprechpartner"], ["adresse", "Adresse"], ["telefon", "Telefon"], ["email", "E-Mail"], ["zeichen", "Zeichen (Schaden-Nr., Kennzeichen, Az.)"], ["iban", "IBAN"]] as const).map(([k, l]) => (
             <Feld key={k} label={l}><input className="feld" style={{ width: "100%" }} value={String(panel[k] ?? "")} onChange={(e) => setPanel({ ...panel, [k]: e.target.value })} /></Feld>
           ))}
@@ -288,6 +288,7 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
     sort === "datum" ? b.datum.localeCompare(a.datum) || b.id - a.id
     : sort === "typ" ? a.typ.localeCompare(b.typ) || b.datum.localeCompare(a.datum)
     : a.absender.localeCompare(b.absender) || b.datum.localeCompare(a.datum));
+  const typen = Array.from(new Set([...DOKTYPEN, ...doks.map((x) => x.typ), "Anspruchsschreiben", "Akteneinsichtsgesuch", "Erinnerung", "Kostennote", "Deckungsanfrage", "Schreiben"])).sort((a, b) => a.localeCompare(b, "de"));
   const gruppe = (x: DokumentRow) => (sort === "typ" ? x.typ : sort === "beteiligter" ? x.absender || "–" : "");
 
   const hochladen = async (files: FileList) => {
@@ -345,9 +346,7 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
                     {x.datei ? <a href={`/api/dokumente/${x.id}`} target="_blank" rel="noreferrer" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</a> : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</span>}
                     <a href="#" className="lab" onClick={(e) => { e.preventDefault(); setUmbenennen({ id: x.id, name: x.name }); }}>✎</a>
                   </span>}
-              <select className="feld" style={{ padding: "2px 4px", fontSize: 13.5 }} value={x.typ} onChange={(e) => speichern(x.id, { typ: e.target.value })}>
-                {[...new Set([x.typ, ...DOKTYPEN])].map((t) => <option key={t}>{t}</option>)}
-              </select>
+              <TypFeld wert={x.typ} vorschlaege={typen} onSpeichern={(t) => speichern(x.id, { typ: t })} />
               <span className="lab" style={{ fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.absender}</span>
             </div>
           </div>
@@ -357,30 +356,93 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
   );
 }
 
-/** Firma aus dem Adressbuch übernehmen (Name, Anschrift, Kontakt) – Schaden-Nr. und Ansprechpartner bleiben pro Akte. */
-function AusAdressbuch({ rolle, verknuepft, onWahl }: { rolle: string; verknuepft: number | null; onWahl: (k: Record<string, unknown>) => void }) {
+/**
+ * Beteiligten aus einer Liste wählen: Firmen aus dem Adressbuch, Personen aus anderen Akten.
+ * Liste öffnet sich beim Klick ins Feld, Tippen filtert. Schaden-Nr. und Ansprechpartner bleiben pro Akte.
+ */
+type Eintrag = { schluessel: string; titel: string; info: string; quelle: "adressbuch" | "person"; id?: number; daten?: Record<string, unknown> };
+function AusListe({ rolle, akte, verknuepft, onWahl }: { rolle: string; akte: string; verknuepft: number | null; onWahl: (k: Record<string, unknown>) => void }) {
   const [suche, setSuche] = useState("");
-  const [treffer, setTreffer] = useState<{ id: number; name: string; art: string; plz_ort: string }[]>([]);
+  const [offen, setOffen] = useState(false);
+  const [aktiv, setAktiv] = useState(0);
+  const [liste, setListe] = useState<Eintrag[]>([]);
+  const person = ["Mandant", "Fahrer", "Gegner", "Zeuge"].includes(rolle);
   useEffect(() => {
-    if (suche.trim().length < 2) return setTreffer([]);
-    const art = rolle === "Versicherung" ? "" : rolle;
-    const t = setTimeout(() => fetch(`/api/kontakte?suche=${encodeURIComponent(suche)}${art ? "&art=" + encodeURIComponent(art) : ""}`).then((r) => r.json()).then((x) => setTreffer(x.slice(0, 6))), 150);
+    if (!offen) return;
+    const t = setTimeout(async () => {
+      const qs = encodeURIComponent(suche.trim());
+      if (person) {
+        const x: { name: string; adresse: string; telefon: string; email: string; iban: string; rollen: string; akten: string }[] = await fetch(`/api/personen?suche=${qs}&ohne=${encodeURIComponent(akte)}`).then((r) => r.json());
+        setListe(x.map((p) => ({ schluessel: "p" + p.name, titel: p.name, info: `${p.rollen.split(",").join("/")} in ${p.akten.split(",").join(", ")}${p.telefon ? " · " + p.telefon : ""}`, quelle: "person", daten: { name: p.name, adresse: p.adresse, telefon: p.telefon, email: p.email, iban: p.iban } })));
+      } else {
+        const art = ["Versicherung", "Werkstatt", "Gutachter", "Bank", "Polizei"].includes(rolle) && rolle !== "Versicherung" ? rolle : "";
+        const x: { id: number; name: string; art: string; plz_ort: string }[] = await fetch(`/api/kontakte?suche=${qs}${art ? "&art=" + encodeURIComponent(art) : ""}`).then((r) => r.json());
+        setListe(x.slice(0, 50).map((k) => ({ schluessel: "k" + k.id, titel: k.name, info: `${k.art}${k.plz_ort ? " · " + k.plz_ort : ""}`, quelle: "adressbuch", id: k.id })));
+      }
+      setAktiv(0);
+    }, 120);
     return () => clearTimeout(t);
-  }, [suche, rolle]);
-  const waehlen = async (id: number) => { const k = await fetch(`/api/kontakte/${id}?als=beteiligter`).then((r) => r.json()); const { rolle: _r, ...rest } = k; void _r; onWahl(rest); setSuche(""); setTreffer([]); };
+  }, [suche, rolle, offen, person, akte]);
+  const waehlen = async (e: Eintrag) => {
+    if (e.quelle === "adressbuch" && e.id) { const k = await fetch(`/api/kontakte/${e.id}?als=beteiligter`).then((r) => r.json()); const { rolle: _r, ...rest } = k; void _r; onWahl(rest); }
+    else if (e.daten) onWahl({ ...e.daten, kontakt_id: null });
+    setSuche(""); setOffen(false);
+  };
   return (
     <div style={{ marginBottom: 10, position: "relative" }}>
-      <div className="lab" style={{ marginBottom: 3 }}>Aus Adressbuch {verknuepft ? <span style={{ color: "#1d7a43" }}>· verknüpft ✓</span> : ""}</div>
-      <input className="feld" style={{ width: "100%" }} placeholder="Name eintippen, z. B. HUK …" value={suche} onChange={(e) => setSuche(e.target.value)} />
-      {treffer.length > 0 && (
-        <div style={{ position: "absolute", left: 0, right: 0, top: "100%", background: "#fff", border: "1px solid var(--line)", borderRadius: 4, boxShadow: "0 6px 18px rgba(0,0,0,.12)", zIndex: 30 }}>
-          {treffer.map((t) => (
-            <div key={t.id} onClick={() => waehlen(t.id)} style={{ padding: "7px 10px", cursor: "pointer", fontSize: 14.5, borderBottom: "1px solid var(--line2)" }}>
-              <b style={{ fontWeight: 500 }}>{t.name}</b> <span className="lab">{t.art}{t.plz_ort && ` · ${t.plz_ort}`}</span>
+      <div className="lab" style={{ marginBottom: 3 }}>{person ? "Aus bisherigen Akten wählen" : "Aus Adressbuch wählen"} {verknuepft ? <span style={{ color: "#1d7a43" }}>· verknüpft ✓</span> : ""}</div>
+      <input className="feld" style={{ width: "100%" }} placeholder={person ? "Klicken oder Namen tippen …" : "Klicken oder z. B. „HUK“ tippen …"} value={suche}
+        onFocus={() => setOffen(true)} onBlur={() => setTimeout(() => setOffen(false), 150)} onChange={(e) => { setSuche(e.target.value); setOffen(true); }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") { e.preventDefault(); setAktiv((a) => Math.min(a + 1, liste.length - 1)); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setAktiv((a) => Math.max(a - 1, 0)); }
+          else if (e.key === "Enter" && liste[aktiv]) { e.preventDefault(); waehlen(liste[aktiv]); }
+          else if (e.key === "Escape") setOffen(false);
+        }} />
+      {offen && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: "100%", background: "#fff", border: "1px solid var(--line)", borderRadius: 4, boxShadow: "0 6px 18px rgba(0,0,0,.12)", zIndex: 30, maxHeight: 300, overflowY: "auto" }}>
+          {liste.length === 0 ? <div className="lab" style={{ padding: "8px 10px" }}>{person ? "Keine Personen aus anderen Akten" : "Nichts im Adressbuch – unten neu eingeben oder im Adressbuch anlegen"}</div>
+          : liste.map((t, i) => (
+            <div key={t.schluessel} onMouseDown={(e) => { e.preventDefault(); waehlen(t); }} onMouseEnter={() => setAktiv(i)}
+              style={{ padding: "7px 10px", cursor: "pointer", fontSize: 14.5, borderBottom: "1px solid var(--line2)", background: i === aktiv ? "var(--sel)" : undefined }}>
+              <b style={{ fontWeight: 500 }}>{t.titel}</b> <span className="lab">{t.info}</span>
             </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+/** Dokumenttyp mit Autovervollständigung: tippen, Pfeiltasten, Enter. Eigene Typen sind erlaubt. */
+function TypFeld({ wert, vorschlaege, onSpeichern }: { wert: string; vorschlaege: string[]; onSpeichern: (t: string) => void }) {
+  const [text, setText] = useState(wert);
+  const [offen, setOffen] = useState(false);
+  const [aktiv, setAktiv] = useState(0);
+  useEffect(() => setText(wert), [wert]);
+  const q = text.trim().toLowerCase();
+  const treffer = (q && q !== wert.toLowerCase() ? vorschlaege.filter((t) => t.toLowerCase().includes(q)).sort((a, b) => Number(!a.toLowerCase().startsWith(q)) - Number(!b.toLowerCase().startsWith(q))) : vorschlaege).slice(0, 8);
+  const fertig = (t: string) => { const v = t.trim(); setOffen(false); if (v && v !== wert) onSpeichern(v); else setText(wert); };
+  return (
+    <span style={{ position: "relative" }}>
+      <input className="feld" value={text} style={{ padding: "2px 6px", fontSize: 13.5, width: "100%" }}
+        onFocus={(e) => { e.target.select(); setOffen(true); setAktiv(0); }}
+        onChange={(e) => { setText(e.target.value); setOffen(true); setAktiv(0); }}
+        onBlur={() => setTimeout(() => fertig(text), 120)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") { e.preventDefault(); setAktiv((a) => Math.min(a + 1, treffer.length - 1)); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setAktiv((a) => Math.max(a - 1, 0)); }
+          else if (e.key === "Enter") { e.preventDefault(); const t = offen && treffer[aktiv] ? treffer[aktiv] : text; setText(t); fertig(t); (e.target as HTMLInputElement).blur(); }
+          else if (e.key === "Escape") { setText(wert); setOffen(false); (e.target as HTMLInputElement).blur(); }
+        }} />
+      {offen && treffer.length > 0 && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: "100%", minWidth: 200, background: "#fff", border: "1px solid var(--line)", borderRadius: 4, boxShadow: "0 6px 18px rgba(0,0,0,.12)", zIndex: 40, maxHeight: 260, overflowY: "auto" }}>
+          {treffer.map((t, i) => (
+            <div key={t} onMouseDown={(e) => { e.preventDefault(); setText(t); fertig(t); }} onMouseEnter={() => setAktiv(i)}
+              style={{ padding: "5px 9px", fontSize: 13.5, cursor: "pointer", background: i === aktiv ? "var(--sel)" : undefined }}>{t}</div>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }
