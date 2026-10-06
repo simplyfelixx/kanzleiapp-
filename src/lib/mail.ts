@@ -124,10 +124,11 @@ export async function mailSpeichern(m: MailRoh, quelle: string): Promise<{ id: n
 
 export function mailListe() {
   tabellen();
-  return db().prepare(`SELECT m.id, m.von, m.von_name, m.betreff, m.datum, m.akte_id, m.gelesen, m.status,
+  return db().prepare(`SELECT m.id, m.quelle, m.an, m.von, m.von_name, m.betreff, m.datum, m.akte_id, m.gelesen, m.status,
     (SELECT COUNT(*) FROM mail_anhang a WHERE a.mail_id=m.id) AS anhaenge
     FROM mails m WHERE m.status != 'geloescht' ORDER BY m.datum DESC LIMIT 300`).all();
 }
+export function tabellenMail() { tabellen(); }
 export function mailLaden(id: number) {
   tabellen();
   const m = db().prepare("SELECT * FROM mails WHERE id=?").get(id) as Record<string, unknown> | undefined;
@@ -146,22 +147,26 @@ export function anhangLaden(id: number) {
 export function anhangAbgelegt(id: number, akteId: string) { tabellen(); db().prepare("UPDATE mail_anhang SET abgelegt_in=? WHERE id=?").run(akteId, id); }
 
 // ---- IMAP-Konto (Passwort verschlüsselt mit dem App-Schlüssel) ----
-export interface MailKonto { aktiv: boolean; host: string; port: number; benutzer: string; ordner: string; tls: boolean; hatPasswort: boolean }
+export interface MailKonto {
+  aktiv: boolean; host: string; port: number; benutzer: string; ordner: string; tls: boolean; hatPasswort: boolean;
+  // Versand (SMTP), gleiche Zugangsdaten
+  smtpHost: string; smtpPort: number; absender: string; absenderName: string; signatur: string;
+}
 const schl = () => crypto.createHash("sha256").update("mailkonto:" + (process.env.AUTH_SECRET ?? "")).digest();
 function verschluesseln(t: string) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv("aes-256-gcm", schl(), iv);
   const enc = Buffer.concat([c.update(t, "utf8"), c.final()]);
   return [iv, c.getAuthTag(), enc].map((b) => b.toString("base64")).join(".");
 }
-function entschluesseln(s: string) {
+export function entschluesseln(s: string) {
   const [iv, tag, enc] = s.split(".").map((x) => Buffer.from(x, "base64"));
   const d = crypto.createDecipheriv("aes-256-gcm", schl(), iv); d.setAuthTag(tag);
   return Buffer.concat([d.update(enc), d.final()]).toString("utf8");
 }
-function kontoRoh(): (Omit<MailKonto, "hatPasswort"> & { passwort?: string }) {
+export function kontoRoh(): (Omit<MailKonto, "hatPasswort"> & { passwort?: string }) {
   tabellen();
   const r = db().prepare("SELECT daten FROM mail_konto WHERE id=1").get() as { daten: string } | undefined;
-  return { aktiv: false, host: "", port: 993, benutzer: "", ordner: "INBOX", tls: true, ...(r ? JSON.parse(r.daten) : {}) };
+  return { aktiv: false, host: "", port: 993, benutzer: "", ordner: "INBOX", tls: true, smtpHost: "", smtpPort: 587, absender: "", absenderName: "", signatur: "", ...(r ? JSON.parse(r.daten) : {}) };
 }
 export function kontoLaden(): MailKonto { const { passwort, ...k } = kontoRoh(); return { ...k, hatPasswort: !!passwort }; }
 export function kontoSpeichern(k: Partial<MailKonto> & { passwort?: string }) {
@@ -173,6 +178,11 @@ export function kontoSpeichern(k: Partial<MailKonto> & { passwort?: string }) {
     benutzer: typeof k.benutzer === "string" ? k.benutzer.trim().slice(0, 200) : alt.benutzer,
     ordner: typeof k.ordner === "string" && k.ordner.trim() ? k.ordner.trim().slice(0, 100) : alt.ordner,
     tls: typeof k.tls === "boolean" ? k.tls : alt.tls,
+    smtpHost: typeof k.smtpHost === "string" ? k.smtpHost.trim().slice(0, 120) : alt.smtpHost,
+    smtpPort: Number(k.smtpPort) > 0 && Number(k.smtpPort) < 65536 ? Number(k.smtpPort) : alt.smtpPort,
+    absender: typeof k.absender === "string" ? k.absender.trim().slice(0, 200) : alt.absender,
+    absenderName: typeof k.absenderName === "string" ? k.absenderName.trim().slice(0, 120) : alt.absenderName,
+    signatur: typeof k.signatur === "string" ? k.signatur.slice(0, 2000) : alt.signatur,
     passwort: k.passwort ? verschluesseln(k.passwort) : alt.passwort,
   };
   db().prepare("INSERT INTO mail_konto (id,daten) VALUES (1,?) ON CONFLICT(id) DO UPDATE SET daten=excluded.daten").run(JSON.stringify(neu));

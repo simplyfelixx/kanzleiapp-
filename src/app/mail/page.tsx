@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/components/Store";
+import MailVerfassen, { type Entwurf } from "@/components/MailVerfassen";
 
-type Kurz = { id: number; von: string; von_name: string; betreff: string; datum: string; akte_id: string | null; gelesen: number; anhaenge: number };
+type Kurz = { id: number; quelle?: string; an?: string; von: string; von_name: string; betreff: string; datum: string; akte_id: string | null; gelesen: number; anhaenge: number };
 type Erkannt = {
   typ: string; absender: string; datum: string; zusammenfassung: string; kiText: string; betraege: { label: string; wert: number }[];
   frist: { datum: string; text: string } | null; zeichen: string; akteId: string | null; akteGrund: string; sicher: boolean; textQuelle: string; hinweis: string;
@@ -76,11 +77,21 @@ export default function MailSeite() {
   const [mail, setMail] = useState<Mail | null>(null);
   const [laeuft, setLaeuft] = useState("");
   const [ziehen, setZiehen] = useState(false);
+  const [entwurf, setEntwurf] = useState<Entwurf | null>(null);
   const datei = useRef<HTMLInputElement>(null);
 
   const laden = useCallback(() => fetch("/api/mail").then((r) => r.json()).then(setListe), []);
   const mailLaden = useCallback((id: number) => fetch(`/api/mail/${id}`).then((r) => r.json()).then(setMail), []);
-  useEffect(() => { const id = Number(new URLSearchParams(window.location.search).get("id")); if (id) setWahl(id); }, []);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search), id = Number(q.get("id")), neu = q.get("neu");
+    if (id) setWahl(id);
+    if (neu !== null) setEntwurf({ akteId: neu || null, betreff: neu ? `Unser Zeichen ${neu}` : "" });
+  }, []);
+  const antworten = (m: Mail) => setEntwurf({
+    an: m.von, akteId: m.akte_id, antwortAuf: m.id,
+    betreff: /^(re|aw):/i.test(m.betreff) ? m.betreff : `AW: ${m.betreff}`,
+    text: `\n\n\nAm ${de(m.datum)} um ${m.datum.slice(11, 16)} schrieb ${m.von_name || m.von}:\n` + m.text.split("\n").slice(0, 200).map((z) => "> " + z).join("\n"),
+  });
   useEffect(() => { laden(); fetch("/api/akten").then((r) => r.json()).then(setAkten); }, [laden]);
   useEffect(() => { if (wahl) mailLaden(wahl); else setMail(null); }, [wahl, mailLaden]);
 
@@ -115,6 +126,7 @@ export default function MailSeite() {
       <div style={{ width: 420, flex: "none", borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", display: "flex", gap: 6, alignItems: "center" }}>
           <h1 style={{ fontSize: 21, margin: 0, flex: 1 }}>Mail</h1>
+          <button className="btn pri" onClick={() => setEntwurf({})}>Neue Mail</button>
           <button className="btn" onClick={() => datei.current?.click()} title="Mails aus Outlook herausziehen oder als .eml/.msg speichern">Importieren</button>
           <button className="btn" onClick={abrufen}>Abrufen</button>
           <input ref={datei} type="file" accept=".eml,.msg" multiple hidden onChange={(e) => e.target.files && importieren(e.target.files)} />
@@ -124,9 +136,9 @@ export default function MailSeite() {
           {!liste ? <div className="empty">Lade …</div> : liste.length === 0 ? (
             <div className="empty" style={{ lineHeight: 1.6, padding: 24 }}>Noch keine Mails.<br />Mails aus Outlook einfach hierher ziehen<br />oder „Abrufen“ (Konto unter Einstellungen).</div>
           ) : liste.map((m) => (
-            <div key={m.id} onClick={() => setWahl(m.id)} style={{ padding: "10px 16px", borderBottom: "1px solid var(--line2)", cursor: "pointer", background: wahl === m.id ? "var(--sel)" : undefined, borderLeft: `3px solid ${m.gelesen ? "transparent" : "var(--akzent)"}` }}>
+            <div key={m.id} onClick={() => { setEntwurf(null); setWahl(m.id); }} style={{ padding: "10px 16px", borderBottom: "1px solid var(--line2)", cursor: "pointer", background: wahl === m.id ? "var(--sel)" : undefined, borderLeft: `3px solid ${m.gelesen ? "transparent" : "var(--akzent)"}` }}>
               <div style={{ display: "flex", gap: 8 }}>
-                <span style={{ flex: 1, fontWeight: m.gelesen ? 400 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.von_name || m.von}</span>
+                <span style={{ flex: 1, fontWeight: m.gelesen ? 400 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.quelle === "gesendet" ? <><span className="lab">an </span>{m.an}</> : m.von_name || m.von}</span>
                 <span className="lab mono">{zeit(m.datum)}</span>
               </div>
               <div style={{ fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: m.gelesen ? 400 : 500 }}>{m.betreff}</div>
@@ -139,12 +151,14 @@ export default function MailSeite() {
       </div>
 
       <div style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "18px 28px" }}>
-        {!mail ? <div className="empty">Mail links auswählen</div> : (
+        {entwurf ? <MailVerfassen key={JSON.stringify(entwurf)} start={entwurf} akten={akten} abbrechen={() => setEntwurf(null)} fertig={(id) => { setEntwurf(null); laden(); setWahl(id); }} />
+        : !mail ? <div className="empty">Mail links auswählen</div> : (
           <div style={{ maxWidth: 900, display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <h2 style={{ fontSize: 20, margin: "0 0 4px", fontWeight: 600 }}>{mail.betreff}</h2>
               <div style={{ fontSize: 14.5 }}><b style={{ fontWeight: 500 }}>{mail.von_name || mail.von}</b> <span className="lab">&lt;{mail.von}&gt; · {de(mail.datum)} {mail.datum.slice(11, 16)}</span></div>
               {mail.an && <div className="lab">an {mail.an}</div>}
+              <div style={{ marginTop: 8 }}><button className="btn" onClick={() => antworten(mail)}>↩ Antworten</button></div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
                 <span className="lab">Akte</span>
                 <select className="feld" value={mail.akte_id ?? ""} onChange={(e) => zuordnen(e.target.value)} style={{ maxWidth: 320 }}>

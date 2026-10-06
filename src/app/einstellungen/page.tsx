@@ -54,15 +54,19 @@ function KiEinstellungen() {
 
 function MailKonto() {
   const { zeige } = useStore();
-  const [k, setK] = useState<{ aktiv: boolean; host: string; port: number; benutzer: string; ordner: string; tls: boolean; hatPasswort: boolean } | null>(null);
+  const [k, setK] = useState<{ aktiv: boolean; host: string; port: number; benutzer: string; ordner: string; tls: boolean; hatPasswort: boolean; smtpHost: string; smtpPort: number; absender: string; absenderName: string; signatur: string } | null>(null);
   const [pw, setPw] = useState("");
+  const testen = async () => {
+    const r = await fetch("/api/mail/senden", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ test: true }) });
+    zeige(r.ok ? "Versand-Verbindung in Ordnung" : (await r.json()).fehler);
+  };
   useEffect(() => { fetch("/api/mail/konto").then((r) => r.json()).then(setK); }, []);
   if (!k) return null;
   const speichern = async () => {
     const r = await fetch("/api/mail/konto", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...k, passwort: pw || undefined }) });
     if (r.ok) { setK(await r.json()); setPw(""); zeige("Mailkonto gespeichert"); }
   };
-  const f = (key: "host" | "benutzer" | "ordner", l: string, w: string) => (
+  const f = (key: "host" | "benutzer" | "ordner" | "smtpHost" | "absender" | "absenderName", l: string, w: string) => (
     <label><div className="lab">{l}</div><input className="feld" style={{ width: w }} value={k[key]} onChange={(x) => setK({ ...k, [key]: x.target.value })} /></label>
   );
   return (
@@ -78,6 +82,18 @@ function MailKonto() {
         <button className="btn pri" onClick={speichern}>Speichern</button>
       </div>
       <div className="lab" style={{ marginTop: 6 }}>Passwort wird verschlüsselt gespeichert.</div>
+      <div className="th" style={{ margin: "18px 0 8px" }}>Versand (SMTP)</div>
+      <div className="lab" style={{ marginBottom: 10 }}>Gleicher Benutzer und gleiches Passwort wie oben. Port 587 (STARTTLS) oder 465 (SSL). Gesendet wird nur nach Klick auf „Senden“.</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        {f("smtpHost", "SMTP-Server", "220px")}
+        <label><div className="lab">Port</div><input className="feld" style={{ width: 80 }} value={k.smtpPort} onChange={(x) => setK({ ...k, smtpPort: Number(x.target.value) || 587 })} /></label>
+        {f("absender", "Absenderadresse", "240px")}
+        {f("absenderName", "Absendername", "220px")}
+      </div>
+      <label style={{ display: "block", marginTop: 10 }}><div className="lab">Signatur</div>
+        <textarea className="feld" style={{ width: "100%", minHeight: 90 }} value={k.signatur} onChange={(x) => setK({ ...k, signatur: x.target.value })} placeholder={"Kanzlei Muster\nRechtsanwalt …\nTel. …"} />
+      </label>
+      <div style={{ display: "flex", gap: 6, marginTop: 8 }}><button className="btn pri" onClick={speichern}>Speichern</button><button className="btn" onClick={testen}>Verbindung testen</button></div>
     </div>
   );
 }

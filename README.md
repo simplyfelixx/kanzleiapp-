@@ -49,6 +49,7 @@ Ein Klick auf „Kanzlei“ startet den Server unsichtbar im Hintergrund (falls 
 - **Abrufen:** per IMAP (Konto unter Einstellungen, Passwort verschlüsselt gespeichert). Outlook/Microsoft 365 folgt über Microsoft Graph.
 - Jeder Anhang (PDF, Bild) wird sofort ausgewertet und als Karte unter der Mail angezeigt: Typ, Absender, Beträge, Zeichen, Frist, Kurz-Zusammenfassung, passende Akte. Dazu „Öffnen“ und „In Akte ablegen“ (Name nach Schema).
 - Mailtext wird nur als Text angezeigt (kein HTML, keine externen Inhalte).
+- **Senden:** „Neue Mail“, „↩ Antworten“ oder in der Akte „@ Mail senden“. Empfänger aus den Beteiligten, Anhänge aus den Dokumenten der Akte, Signatur aus den Einstellungen. Gesendet wird nur nach Klick und Rückfrage (Strg+Enter). Die Mail steht danach in der Liste und im Verlauf der Akte. SMTP unter Einstellungen → Mailkonto (Port 587/465, „Verbindung testen“).
 
 ## Texterkennung (Scans)
 

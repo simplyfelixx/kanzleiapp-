@@ -81,6 +81,7 @@ export default function AktePage() {
           <span className="mono" style={{ fontSize: 17, fontWeight: 500, color: "#3a3f47" }}>Az. {akte.id}</span>
           <div style={{ flex: 1 }} />
           <button className="btn pri" onClick={() => setSchreiben(true)}>✉ Schreiben erstellen</button>
+          <a className="btn" style={{ textDecoration: "none" }} href={`/mail?neu=${encodeURIComponent(id)}`}>@ Mail senden</a>
           <select className="feld" value={akte.prioritaet} onChange={(e) => speichern({ art: "akte", prioritaet: e.target.value })}>
             {PRIOS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
