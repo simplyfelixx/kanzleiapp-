@@ -22,6 +22,7 @@ export default function Adressbuch() {
     const q = new URLSearchParams(); if (art) q.set("art", art); if (suche) q.set("suche", suche);
     fetch("/api/kontakte?" + q).then((r) => r.json()).then(setListe);
   }, [art, suche]);
+  useEffect(() => { const id = Number(new URLSearchParams(window.location.search).get("id")); if (id) setWahl(id); }, []);
   useEffect(() => { const t = setTimeout(laden, 150); return () => clearTimeout(t); }, [laden]);
   const detail = useCallback((id: number) => fetch(`/api/kontakte/${id}`).then((r) => r.json()).then(setD), []);
   useEffect(() => { if (wahl) detail(wahl); else setD(null); }, [wahl, detail]);

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useStore } from "./Store";
+import Suche from "./Suche";
 
 const gebiete = ["Alle", "VR", "StR", "ArbR"] as const;
 const gebietName: Record<string, string> = { Alle: "Alle", VR: "Verkehr", StR: "Straf", ArbR: "Arbeit" };
@@ -15,13 +16,13 @@ const hauptNav = [
   { href: "/mail", label: "Mail" },
   { href: "/fristen", label: "Fristen", key: "F6" },
   { href: "/abrechnung", label: "Abrechnung" },
+  { href: "/auswertungen", label: "Auswertung" },
   { href: "/adressbuch", label: "Adressbuch" },
 ];
 const mehrNav = [
   { href: "/akte/214%2F26", label: "Akte Müller (Beispiel)" },
   { href: "/vorlagen", label: "Vorlagen" },
   { href: "/portal-verwaltung", label: "Portal-Verwaltung" },
-  { href: "/auswertungen", label: "Auswertungen" },
   { href: "/protokoll", label: "Protokoll" },
   { href: "/einstellungen", label: "Einstellungen" },
   { href: "/einrichtung", label: "Ersteinrichtung" },
@@ -33,6 +34,7 @@ export default function TopBar() {
   const router = useRouter();
   const { gebiete: gewaehlt, gebietUmschalten, toast } = useStore();
   const [mehr, setMehr] = useState(false);
+  const [suche, setSuche] = useState(false);
   const [offenEingang, setOffenEingang] = useState(0);
   const [ich, setIch] = useState<{ name: string; kuerzel: string; rolle: string } | null>(null);
   useEffect(() => { if (path !== "/login" && path !== "/portal") fetch("/api/auth/ich").then((r) => (r.ok ? r.json() : null)).then(setIch).catch(() => {}); }, [path]);
@@ -43,6 +45,7 @@ export default function TopBar() {
   // F2 Suche (später), F3 Fallaufnahme, F4 Eingang, F5 Mein Tag
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if (e.key === "F2") { e.preventDefault(); setSuche(true); }
       if (e.key === "F3") { e.preventDefault(); router.push("/fallaufnahme"); }
       if (e.key === "F4") { e.preventDefault(); router.push("/eingang"); }
       if (e.key === "F5") { e.preventDefault(); router.push("/"); }
@@ -95,7 +98,8 @@ export default function TopBar() {
       </nav>
       <div style={{ flex: 1 }} />
       <Link href="/fallaufnahme" style={{ fontSize: 14, whiteSpace: "nowrap", textDecoration: "none", border: "1px dashed #b9bec4", borderRadius: 4, padding: "5px 10px", color: "#16191d" }}>+ Fallaufnahme <span className="k">F3</span></Link>
-      <div className="search" style={{ width: 110, flex: "none" }}><span>Suchen</span><span className="k">F2</span></div>
+      <div className="search" style={{ width: 110, flex: "none", cursor: "pointer" }} onClick={() => setSuche(true)}><span>Suchen</span><span className="k">F2</span></div>
+      <Suche offen={suche} schliessen={() => setSuche(false)} />
       <div className="avatar" title={ich ? `${ich.name} · ${ich.rolle} – klicken zum Abmelden` : ""} onClick={abmelden} style={{ cursor: "pointer" }}>{ich?.kuerzel ?? "…"}</div>
     </div>
   );

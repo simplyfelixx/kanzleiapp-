@@ -23,8 +23,6 @@ function tabellen() {
       name TEXT NOT NULL, telefon TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT ''
     );
   `);
-  const sp = (d.prepare("PRAGMA table_info(beteiligte)").all() as { name: string }[]).map((c) => c.name);
-  if (!sp.includes("kontakt_id")) d.exec("ALTER TABLE beteiligte ADD COLUMN kontakt_id INTEGER REFERENCES kontakte(id) ON DELETE SET NULL");
   // Einmalig: vorhandene Firmen-Beteiligte (keine Mandanten/Gegner/Zeugen) ins Adressbuch übernehmen
   if (!(d.prepare("SELECT 1 FROM kontakte LIMIT 1").get())) {
     const rollen = ["Versicherung", "Werkstatt", "Gutachter", "Polizei", "Bank"];
@@ -81,7 +79,10 @@ export function kontaktSpeichern(k: Partial<KontaktRow>): number {
   }
   return Number(d.prepare(`INSERT INTO kontakte (${FELDER.join(",")}) VALUES (${FELDER.map((x) => "@" + x).join(",")})`).run(f).lastInsertRowid);
 }
-export function kontaktLoeschen(id: number) { tabellen(); db().prepare("DELETE FROM kontakte WHERE id=?").run(id); }
+export function kontaktLoeschen(id: number) {
+  tabellen();
+  db().transaction(() => { db().prepare("UPDATE beteiligte SET kontakt_id=NULL WHERE kontakt_id=?").run(id); db().prepare("DELETE FROM kontakte WHERE id=?").run(id); })();
+}
 export function personSpeichern(kontaktId: number, p: { id?: number; name: string; telefon?: string; email?: string }) {
   tabellen();
   const v = [p.name.trim().slice(0, 120), (p.telefon ?? "").slice(0, 60), (p.email ?? "").slice(0, 120)];

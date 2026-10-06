@@ -123,6 +123,9 @@ function open(): Database.Database {
   // Spalten, die in späteren Versionen dazugekommen sind
   const spalten = (db.prepare("PRAGMA table_info(eingang)").all() as { name: string }[]).map((c) => c.name);
   if (!spalten.includes("datei")) db.exec("ALTER TABLE eingang ADD COLUMN datei TEXT; ALTER TABLE eingang ADD COLUMN datum TEXT;");
+  // Verknüpfung Beteiligter → Adressbuch (immer beim Öffnen sicherstellen, nicht erst beim ersten Adressbuch-Aufruf)
+  const bsp = (db.prepare("PRAGMA table_info(beteiligte)").all() as { name: string }[]).map((c) => c.name);
+  if (!bsp.includes("kontakt_id")) db.exec("ALTER TABLE beteiligte ADD COLUMN kontakt_id INTEGER");
   const n = (db.prepare("SELECT COUNT(*) c FROM akten").get() as { c: number }).c;
   if (n === 0) seed(db);
   const v = (db.prepare("SELECT COUNT(*) c FROM eingang").get() as { c: number }).c;

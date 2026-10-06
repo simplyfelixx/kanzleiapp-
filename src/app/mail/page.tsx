@@ -80,6 +80,7 @@ export default function MailSeite() {
 
   const laden = useCallback(() => fetch("/api/mail").then((r) => r.json()).then(setListe), []);
   const mailLaden = useCallback((id: number) => fetch(`/api/mail/${id}`).then((r) => r.json()).then(setMail), []);
+  useEffect(() => { const id = Number(new URLSearchParams(window.location.search).get("id")); if (id) setWahl(id); }, []);
   useEffect(() => { laden(); fetch("/api/akten").then((r) => r.json()).then(setAkten); }, [laden]);
   useEffect(() => { if (wahl) mailLaden(wahl); else setMail(null); }, [wahl, mailLaden]);
 
