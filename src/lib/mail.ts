@@ -153,7 +153,7 @@ export interface MailKonto {
   smtpHost: string; smtpPort: number; absender: string; absenderName: string; signatur: string;
 }
 const schl = () => crypto.createHash("sha256").update("mailkonto:" + (process.env.AUTH_SECRET ?? "")).digest();
-function verschluesseln(t: string) {
+export function verschluesseln(t: string) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv("aes-256-gcm", schl(), iv);
   const enc = Buffer.concat([c.update(t, "utf8"), c.final()]);
   return [iv, c.getAuthTag(), enc].map((b) => b.toString("base64")).join(".");

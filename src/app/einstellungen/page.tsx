@@ -98,6 +98,65 @@ function MailKonto() {
   );
 }
 
+function Outlook() {
+  const { zeige } = useStore();
+  const [k, setK] = useState<{ clientId: string; tenant: string; aktiv: boolean; konto: string; verbunden: boolean } | null>(null);
+  const [code, setCode] = useState<{ code: string; url: string } | null>(null);
+  const laden = () => fetch("/api/mail/outlook").then((r) => r.json()).then(setK);
+  useEffect(() => { laden(); }, []);
+  const post = (aktion: string) => fetch("/api/mail/outlook", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktion }) }).then(async (r) => ({ ok: r.ok, j: await r.json() }));
+  // Während ein Code angezeigt wird, regelmäßig nachfragen
+  useEffect(() => {
+    if (!code) return;
+    let aus = false;
+    const t = setInterval(async () => {
+      const { j } = await post("pruefen");
+      if (aus || j.status === "wartet") return;
+      setCode(null);
+      if (j.status === "fertig") zeige(`Verbunden mit ${j.konto}`); else zeige(j.fehler || "Code abgelaufen – bitte neu anmelden");
+      laden();
+    }, 5000);
+    return () => { aus = true; clearInterval(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+  if (!k) return null;
+  const speichern = async (neu = k) => {
+    const r = await fetch("/api/mail/outlook", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(neu) });
+    const j = await r.json(); if (!r.ok) return zeige(j.fehler);
+    setK(j); zeige("Outlook-Einstellungen gespeichert");
+  };
+  const anmelden = async () => { const { ok, j } = await post("start"); if (!ok) return zeige(j.fehler); setCode(j); };
+  const abmelden = async () => { if (!confirm("Von Microsoft abmelden?")) return; const { j } = await post("abmelden"); setK(j); };
+  return (
+    <div style={{ marginTop: 28, maxWidth: 720 }}>
+      <div className="th" style={{ marginBottom: 8 }}>Outlook / Microsoft 365</div>
+      <div className="lab" style={{ marginBottom: 10, lineHeight: 1.5 }}>Abrufen und Senden über das Outlook-Konto statt IMAP/SMTP. Einmalig im Microsoft Entra Admin Center eine App registrieren (Anleitung in der README) und hier die Anwendungs-ID eintragen. Kein Passwort wird in der App gespeichert.</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <label><div className="lab">Anwendungs-ID (Client-ID)</div><input className="feld mono" style={{ width: 340 }} value={k.clientId} placeholder="00000000-0000-0000-0000-000000000000" onChange={(x) => setK({ ...k, clientId: x.target.value })} /></label>
+        <label><div className="lab">Mandant (Tenant)</div><input className="feld mono" style={{ width: 200 }} value={k.tenant} onChange={(x) => setK({ ...k, tenant: x.target.value })} /></label>
+        <button className="btn" onClick={() => speichern()}>Speichern</button>
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
+        {k.verbunden ? <>
+          <span style={{ color: "#1d7a43" }}>✓ Verbunden{k.konto && ` als ${k.konto}`}</span>
+          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 14.5 }}><input type="checkbox" checked={k.aktiv} onChange={(x) => speichern({ ...k, aktiv: x.target.checked })} /> Outlook statt IMAP/SMTP verwenden</label>
+          <div style={{ flex: 1 }} /><button className="btn" onClick={abmelden}>Abmelden</button>
+        </> : <>
+          <button className="btn pri" disabled={!k.clientId || !!code} onClick={anmelden}>Bei Microsoft anmelden</button>
+          {k.aktiv && <span style={{ color: "var(--rot)" }}>Outlook ist gewählt, aber die Anmeldung ist abgelaufen – Abrufen und Senden gehen erst nach erneuter Anmeldung.</span>}
+        </>}
+      </div>
+      {code && (
+        <div style={{ marginTop: 10, border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: "12px 14px", lineHeight: 1.6 }}>
+          1. <a href={code.url} target="_blank" rel="noopener noreferrer">{code.url}</a> öffnen<br />
+          2. Code eingeben: <b className="mono" style={{ fontSize: 19, letterSpacing: 2 }}>{code.code}</b> <button className="btn" onClick={() => navigator.clipboard?.writeText(code.code)}>Kopieren</button><br />
+          3. Mit dem Kanzlei-Konto anmelden und zustimmen. <span className="lab">Diese Seite wartet automatisch …</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Datensicherung() {
   const { zeige } = useStore();
   const [e, setE] = useState<{ aktiv: boolean; ordner: string; behalten: number; hatPasswort: boolean; letzte: string | null; letzterFehler: string; dateien: { name: string; groesse: number }[] } | null>(null);
@@ -244,7 +303,7 @@ export default function Einstellungen() {
           </div>
         </div>
       </div>
-          <div style={{ padding: "0 28px 28px" }}><Datensicherung /><KiEinstellungen /><MailKonto /></div>
+          <div style={{ padding: "0 28px 28px" }}><Datensicherung /><KiEinstellungen /><MailKonto /><Outlook /></div>
     </>
   );
 }

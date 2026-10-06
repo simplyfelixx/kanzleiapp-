@@ -46,10 +46,26 @@ Ein Klick auf „Kanzlei“ startet den Server unsichtbar im Hintergrund (falls 
 ## Mail
 
 - **Importieren:** Mails aus Outlook einfach in den Mailbereich ziehen (`.msg`) oder `.eml`-Dateien wählen. Doppelte Mails werden erkannt.
-- **Abrufen:** per IMAP (Konto unter Einstellungen, Passwort verschlüsselt gespeichert). Outlook/Microsoft 365 folgt über Microsoft Graph.
+- **Abrufen:** per IMAP (Konto unter Einstellungen, Passwort verschlüsselt gespeichert) oder über Outlook/Microsoft 365 (siehe unten).
 - Jeder Anhang (PDF, Bild) wird sofort ausgewertet und als Karte unter der Mail angezeigt: Typ, Absender, Beträge, Zeichen, Frist, Kurz-Zusammenfassung, passende Akte. Dazu „Öffnen“ und „In Akte ablegen“ (Name nach Schema).
 - Mailtext wird nur als Text angezeigt (kein HTML, keine externen Inhalte).
 - **Senden:** „Neue Mail“, „↩ Antworten“ oder in der Akte „@ Mail senden“. Empfänger aus den Beteiligten, Anhänge aus den Dokumenten der Akte, Signatur aus den Einstellungen. Gesendet wird nur nach Klick und Rückfrage (Strg+Enter). Die Mail steht danach in der Liste und im Verlauf der Akte. SMTP unter Einstellungen → Mailkonto (Port 587/465, „Verbindung testen“).
+
+## Outlook / Microsoft 365 (Microsoft Graph)
+
+Abrufen und Senden direkt über das Outlook-Konto. Anmeldung per Gerätecode, die App speichert kein Passwort, nur ein verschlüsseltes Anmelde-Token.
+
+**Einmalig einrichten (Admin des Microsoft-365-Kontos):**
+1. https://entra.microsoft.com → *Anwendungen → App-Registrierungen → Neue Registrierung*. Name z. B. „Kanzlei-App“, Kontotyp *Nur Konten in diesem Organisationsverzeichnis*. Keine Umleitungs-URI.
+2. *Authentifizierung → Öffentliche Clientflows zulassen: Ja* → Speichern.
+3. *API-Berechtigungen → Microsoft Graph → Delegiert*: `Mail.Read`, `Mail.Send`, `User.Read`, `offline_access` → *Administratorzustimmung erteilen*.
+4. Aus der *Übersicht* die **Anwendungs-ID (Client-ID)** und die **Verzeichnis-ID (Mandant)** kopieren.
+
+**In der App:** Einstellungen → Outlook / Microsoft 365 → IDs eintragen → Speichern → „Bei Microsoft anmelden“ → Code unter microsoft.com/devicelogin eingeben → „Outlook statt IMAP/SMTP verwenden“ anhaken.
+
+- Abruf: neueste 25 Mails aus dem Posteingang, nur lesend (nichts wird als gelesen markiert). Schon vorhandene werden übersprungen.
+- Senden: über das Konto, die Mail liegt danach auch in Outlook unter „Gesendete Elemente“. Anhänge zusammen bis 2,8 MB.
+- Ist Outlook gewählt und die Anmeldung abgelaufen, kommt eine Fehlermeldung – es wird **nicht** still über IMAP/SMTP gesendet.
 
 ## Texterkennung (Scans)
 

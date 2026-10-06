@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { ABLAGE, db, verlaufEintrag } from "./db";
 import { entschluesseln, kontoRoh, tabellenMail } from "./mail";
+import { graphAbsender, graphAktiv, graphSenden } from "./graph";
 
 export interface Versand { an: string; cc: string; betreff: string; text: string; akteId: string | null; dokumente: number[]; antwortAuf: number | null }
 
@@ -34,8 +35,9 @@ export function versandPruefen(b: Record<string, unknown>): Versand | { fehler: 
 
 export async function senden(v: Versand, wer: string) {
   const k = kontoRoh();
-  if (!k.smtpHost || !k.benutzer || !k.passwort) throw new Error("Versand nicht eingerichtet (Einstellungen → Mailkonto)");
-  const absender = k.absender || k.benutzer;
+  const outlook = graphAktiv();
+  if (!outlook && (!k.smtpHost || !k.benutzer || !k.passwort)) throw new Error("Versand nicht eingerichtet (Einstellungen → Mailkonto oder Outlook)");
+  const absender = outlook ? graphAbsender() : k.absender || k.benutzer;
   if (!ADRESSE.test(absender)) throw new Error("Absenderadresse fehlt (Einstellungen → Mailkonto)");
   tabellenMail();
   const d = db();
@@ -50,6 +52,8 @@ export async function senden(v: Versand, wer: string) {
     return { filename: x.name, path: p };
   });
   const groesse = anhaenge.reduce((s, a) => s + fs.statSync(a.path).size, 0);
+  // Outlook nimmt per sendMail höchstens ca. 4 MB je Anfrage an (Base64 macht die Datei ein Drittel größer)
+  if (outlook && groesse > 2.8 * 1024 * 1024) throw new Error("Anhänge zusammen über 2,8 MB – über Outlook nicht möglich");
   if (groesse > 20 * 1024 * 1024) throw new Error("Anhänge zusammen über 20 MB");
 
   const vorher = v.antwortAuf ? (d.prepare("SELECT message_id FROM mails WHERE id=?").get(v.antwortAuf) as { message_id: string } | undefined) : undefined;
@@ -59,15 +63,22 @@ export async function senden(v: Versand, wer: string) {
   const messageId = `<${crypto.randomUUID()}@${domain}>`;
 
   const nodemailer = (await import("nodemailer")).default;
-  const t = nodemailer.createTransport({
-    host: k.smtpHost, port: k.smtpPort, secure: k.smtpPort === 465, requireTLS: k.smtpPort !== 465 && !LOKAL.test(k.smtpHost),
-    auth: { user: k.benutzer, pass: entschluesseln(k.passwort) }, connectionTimeout: 15000,
-  });
-  await t.sendMail({
+  const nachricht = {
     from: k.absenderName ? { name: k.absenderName, address: absender } : absender,
     to: adressen(v.an), cc: adressen(v.cc), subject: v.betreff, text, attachments: anhaenge, messageId,
     ...(ref ? { inReplyTo: ref, references: ref } : {}),
-  });
+  };
+  if (outlook) {
+    // MIME hier erzeugen, Microsoft versendet und legt in „Gesendete Elemente“ ab
+    const info = await nodemailer.createTransport({ streamTransport: true, buffer: true }).sendMail(nachricht);
+    await graphSenden(info.message as Buffer);
+  } else {
+    const t = nodemailer.createTransport({
+      host: k.smtpHost, port: k.smtpPort, secure: k.smtpPort === 465, requireTLS: k.smtpPort !== 465 && !LOKAL.test(k.smtpHost),
+      auth: { user: k.benutzer, pass: entschluesseln(k.passwort ?? "") }, connectionTimeout: 15000,
+    });
+    await t.sendMail(nachricht);
+  }
 
   const jetzt = new Date(), p = (n: number) => String(n).padStart(2, "0");
   const datum = `${jetzt.getFullYear()}-${p(jetzt.getMonth() + 1)}-${p(jetzt.getDate())} ${p(jetzt.getHours())}:${p(jetzt.getMinutes())}:${p(jetzt.getSeconds())}`;
@@ -84,6 +95,7 @@ export async function senden(v: Versand, wer: string) {
 
 /** Verbindung prüfen, ohne zu senden */
 export async function versandTesten() {
+  if (graphAktiv()) { await (await import("./graph")).graphTesten(); return; }
   const k = kontoRoh();
   if (!k.smtpHost || !k.passwort) throw new Error("Server oder Passwort fehlt");
   const nodemailer = (await import("nodemailer")).default;
