@@ -15,6 +15,7 @@ const NUR: { pfad: string; rollen: Rolle[]; nurSchreiben?: boolean }[] = [
   { pfad: "/api/kanzlei", rollen: ["admin"], nurSchreiben: true },
   { pfad: "/api/ki/einstellungen", rollen: ["admin"], nurSchreiben: true },
   { pfad: "/api/mail/konto", rollen: ["admin"] },
+  { pfad: "/api/sicherung", rollen: ["admin"] },
 ];
 // Deaktivierte Benutzer und Rollenwechsel wirken spätestens nach 30 s (Abgleich mit der Datenbank)
 type Stand = { u: number; k: string; r: Rolle } | null;

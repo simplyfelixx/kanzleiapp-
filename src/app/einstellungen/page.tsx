@@ -82,6 +82,77 @@ function MailKonto() {
   );
 }
 
+function Datensicherung() {
+  const { zeige } = useStore();
+  const [e, setE] = useState<{ aktiv: boolean; ordner: string; behalten: number; hatPasswort: boolean; letzte: string | null; letzterFehler: string; dateien: { name: string; groesse: number }[] } | null>(null);
+  const [pw, setPw] = useState("");
+  const [laeuft, setLaeuft] = useState("");
+  const [wh, setWh] = useState<{ datei: File | null; pw: string; ok: string }>({ datei: null, pw: "", ok: "" });
+  const laden = () => fetch("/api/sicherung").then((r) => r.json()).then(setE);
+  useEffect(() => { laden(); }, []);
+  if (!e) return null;
+  const speichern = async (neu = e) => {
+    const r = await fetch("/api/sicherung", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...neu, passwort: pw || undefined }) });
+    const j = await r.json(); if (!r.ok) return zeige(j.fehler);
+    setPw(""); zeige("Datensicherung gespeichert"); laden();
+  };
+  const jetzt = async () => {
+    setLaeuft("Sichere …");
+    const r = await fetch("/api/sicherung", { method: "POST" }); const j = await r.json(); setLaeuft("");
+    zeige(r.ok ? `Gesichert: ${j.dokumente} Dokumente · ${(j.groesse / 1e6).toFixed(1).replace(".", ",")} MB` : j.fehler); laden();
+  };
+  const wiederherstellen = async () => {
+    if (!wh.datei || wh.ok !== "WIEDERHERSTELLEN") return;
+    setLaeuft("Stelle wieder her …");
+    const fd = new FormData(); fd.append("datei", wh.datei); fd.append("passwort", wh.pw); fd.append("bestaetigung", wh.ok);
+    const r = await fetch("/api/sicherung/wiederherstellen", { method: "POST", body: fd }); const j = await r.json(); setLaeuft("");
+    if (!r.ok) return zeige(j.fehler);
+    alert(`Wiederhergestellt: Stand ${new Date(j.erstellt).toLocaleString("de-DE")}, ${j.dokumente} Dokumente. Bitte neu anmelden.`);
+    window.location.href = "/login";
+  };
+  const alt = e.letzte ? (Date.now() - new Date(e.letzte).getTime()) / 864e5 : Infinity;
+  return (
+    <div style={{ marginTop: 28, maxWidth: 820 }}>
+      <div className="th" style={{ marginBottom: 8 }}>Datensicherung</div>
+      <div style={{ fontSize: 14.5, marginBottom: 10, padding: "8px 12px", borderRadius: 4, background: !e.aktiv || alt > 2 ? "#fdf0ee" : "#eef8f1", color: !e.aktiv || alt > 2 ? "#c0392b" : "#1d7a43" }}>
+        {!e.aktiv ? "Automatische Sicherung ist AUS – bitte einrichten." : e.letzte ? `Letzte Sicherung: ${new Date(e.letzte).toLocaleString("de-DE")}` : "Noch keine Sicherung erstellt."}
+        {e.letzterFehler && <div>Fehler: {e.letzterFehler}</div>}
+      </div>
+      <div className="lab" style={{ marginBottom: 10, lineHeight: 1.5 }}>
+        Täglich automatisch: Datenbank und alle Dokumente in eine verschlüsselte Datei (AES-256). Zielordner am besten auf einem anderen Laufwerk, NAS oder USB-Stick.
+        <b> Das Passwort gut aufbewahren</b> – ohne es lässt sich keine Sicherung öffnen.
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <label style={{ display: "flex", gap: 6, alignItems: "center", paddingBottom: 8 }}><input type="checkbox" checked={e.aktiv} onChange={(x) => speichern({ ...e, aktiv: x.target.checked })} /> täglich automatisch</label>
+        <label style={{ flex: 1, minWidth: 260 }}><div className="lab">Zielordner</div><input className="feld mono" style={{ width: "100%" }} value={e.ordner} onChange={(x) => setE({ ...e, ordner: x.target.value })} /></label>
+        <label><div className="lab">Behalten</div><input className="feld" style={{ width: 70 }} type="number" min={1} value={e.behalten} onChange={(x) => setE({ ...e, behalten: Number(x.target.value) })} /></label>
+        <label><div className="lab">Passwort {e.hatPasswort ? "(gesetzt)" : "(fehlt!)"}</div><input className="feld" type="password" autoComplete="new-password" style={{ width: 180 }} value={pw} placeholder={e.hatPasswort ? "••••••" : "mind. 10 Zeichen"} onChange={(x) => setPw(x.target.value)} /></label>
+        <button className="btn pri" onClick={() => speichern()}>Speichern</button>
+        <button className="btn" disabled={!e.hatPasswort || !!laeuft} onClick={jetzt}>Jetzt sichern</button>
+      </div>
+      {laeuft && <div className="lab" style={{ marginTop: 6 }}>{laeuft}</div>}
+      {e.dateien.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div className="lab">Vorhandene Sicherungen ({e.dateien.length})</div>
+          {e.dateien.slice(0, 5).map((d) => <div key={d.name} className="mono" style={{ fontSize: 13.5 }}>{d.name} · {(d.groesse / 1e6).toFixed(1).replace(".", ",")} MB</div>)}
+        </div>
+      )}
+      <details style={{ marginTop: 14 }}>
+        <summary style={{ cursor: "pointer", fontSize: 14.5, color: "#c0392b" }}>Wiederherstellen …</summary>
+        <div style={{ border: "1px solid #e3a29a", background: "#fdf0ee", borderRadius: 6, padding: 12, marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 14.5 }}>Ersetzt <b>alle</b> aktuellen Daten (Akten, Benutzer, Dokumente) durch den Stand der Sicherung. Der aktuelle Stand wird vorher noch einmal gesichert.</div>
+          <input type="file" accept=".kzb" onChange={(x) => setWh({ ...wh, datei: x.target.files?.[0] ?? null })} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input className="feld" type="password" placeholder="Passwort der Sicherung" value={wh.pw} onChange={(x) => setWh({ ...wh, pw: x.target.value })} />
+            <input className="feld" placeholder="WIEDERHERSTELLEN eintippen" value={wh.ok} onChange={(x) => setWh({ ...wh, ok: x.target.value })} />
+            <button className="btn" style={{ color: "#c0392b", borderColor: "#e3a29a" }} disabled={!wh.datei || !wh.pw || wh.ok !== "WIEDERHERSTELLEN" || !!laeuft} onClick={wiederherstellen}>Wiederherstellen</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 export default function Einstellungen() {
   const { zeige } = useStore();
   const [k, setK] = useState<Kanzlei | null>(null);
@@ -157,7 +228,7 @@ export default function Einstellungen() {
           </div>
         </div>
       </div>
-          <div style={{ padding: "0 28px 28px" }}><KiEinstellungen /><MailKonto /></div>
+          <div style={{ padding: "0 28px 28px" }}><Datensicherung /><KiEinstellungen /><MailKonto /></div>
     </>
   );
 }

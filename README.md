@@ -43,6 +43,10 @@ Beim ersten Start wird der erste Admin angelegt. Weitere Konten unter „Mehr �
 
 Gescannte PDFs und Fotos haben keinen Text. Mit **Einstellungen → Texterkennung für Scans** werden sie mit einem lokalen Bildmodell gelesen (`ollama pull qwen2.5vl:7b`), bis 4 Seiten pro Dokument. Gilt für Eingang und Mail. Solche Werte sind mit „SCAN · OCR“ markiert und sollten besonders geprüft werden.
 
+## Datensicherung
+
+Unter **Einstellungen → Datensicherung**: Zielordner (anderes Laufwerk, NAS, USB), Passwort, Anzahl behalten. Täglich automatisch (Prüfung beim Start und stündlich) oder „Jetzt sichern“. Die `.kzb`-Datei enthält Datenbank und Dokumente, verschlüsselt mit AES-256-GCM (Schlüssel per scrypt aus dem Passwort). Wiederherstellen ersetzt alle Daten; vorher wird der aktuelle Stand gesichert.
+
 ## Protokoll
 
 Unter „Mehr → Protokoll“ (Admin und Anwalt): Anmeldungen, geöffnete Akten und Dokumente, Bestätigungen, Fristen, KI-Nutzung, Benutzer- und Einstellungsänderungen.

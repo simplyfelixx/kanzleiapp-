@@ -173,6 +173,11 @@ function seed(db: Database.Database) {
   })();
 }
 
+/** Verbindung schließen (z. B. vor dem Wiederherstellen einer Sicherung); nächster Zugriff öffnet neu. */
+export function dbSchliessen() {
+  if (g.__db) { try { g.__db.close(); } catch { /* egal */ } g.__db = undefined; }
+}
+
 export function db(): Database.Database {
   if (!g.__db) g.__db = open();
   return g.__db;
