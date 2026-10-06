@@ -27,6 +27,24 @@ npm run desktop:beenden       # Hintergrund-Server stoppen
 
 Ein Klick auf „Kanzlei“ startet den Server unsichtbar im Hintergrund (falls er nicht schon läuft) und öffnet ein eigenes App-Fenster (Microsoft Edge im App-Modus, ohne Adressleiste). Server-Log: `daten/server.log`. Nach einem `git pull` erneut `npm run desktop` ausführen.
 
+## Als echte Windows-Anwendung (.exe)
+
+Auf dem Windows-PC im Projektordner:
+
+```bash
+npm install
+npm run exe        # erzeugt dist/Kanzlei-Setup-<Version>.exe
+```
+
+Den Installer ausführen → „Kanzlei“ im Startmenü und auf dem Desktop. Die App startet ihren Server selbst (nur auf diesem PC erreichbar, freier Port) und beendet ihn beim Schließen – auch wenn sie hart beendet wird.
+
+- **Daten** liegen außerhalb des Programms: `%APPDATA%\Kanzlei\daten` (Menü *Datei → Datenordner öffnen*). Updates und Deinstallation lassen sie unangetastet. Anderer Ort: Umgebungsvariable `KANZLEI_DATEN`.
+- **Umzug von `npm run desktop`:** App schließen, den Inhalt des bisherigen Ordners `daten\` (inkl. der versteckten Datei `.geheim`, sonst sind gespeicherte Mail-Passwörter/Anmeldungen nicht mehr lesbar) nach `%APPDATA%\Kanzlei\daten` kopieren. Alternativ: Datensicherung zurückspielen und Mail-Passwort/Outlook-Anmeldung neu eintragen.
+- Der Bau muss **unter Windows** laufen (plattformabhängige Module). Kein Compiler nötig.
+- Der Bau prüft am Ende, dass keine Datenbank, Dokumente oder Schlüssel ins Paket gelangt sind, und bricht sonst ab.
+- Der Installer ist nicht signiert: Windows SmartScreen zeigt beim ersten Start „Unbekannter Herausgeber“ → *Weitere Informationen → Trotzdem ausführen*.
+- `npm run exe:ordner` baut nur den entpackten Ordner (`dist\win-unpacked\Kanzlei.exe`) zum Ausprobieren.
+
 ## Login und Rollen
 
 - Rollen: **Admin** (Benutzer, Einstellungen, Einrichtung), **Anwalt**, **ReFa**.

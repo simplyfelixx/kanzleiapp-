@@ -6,8 +6,8 @@ import os from "os";
 import path from "path";
 import zlib from "zlib";
 import { ABLAGE, db, dbSchliessen } from "./db";
+import { DATEN } from "./pfade";
 
-const DATEN = path.join(process.cwd(), "daten");
 const MAGIC = Buffer.from("KZB1");
 
 export interface SicherungEinst { aktiv: boolean; ordner: string; behalten: number; hatPasswort: boolean; letzte: string | null; letzterFehler: string }

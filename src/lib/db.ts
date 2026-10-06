@@ -3,6 +3,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
+import { DATEN } from "./pfade";
 import { akten as beispielAkten, vorgaenge as beispielVorgaenge, eingang as beispielEingang } from "./data";
 
 export interface AkteRow {
@@ -65,7 +66,7 @@ export const FALLFELDER: { key: string; label: string }[] = [
 const g = globalThis as unknown as { __db?: Database.Database };
 
 function open(): Database.Database {
-  const dir = path.join(process.cwd(), "daten");
+  const dir = DATEN;
   fs.mkdirSync(dir, { recursive: true });
   const db = new Database(path.join(dir, "kanzlei.db"));
   db.pragma("journal_mode = WAL");
@@ -291,7 +292,7 @@ export function verlaufEintrag(akteId: string, text: string, wer = "") {
 }
 
 // ---- Dateiablage (daten/dokumente) ----
-export const ABLAGE = path.join(process.cwd(), "daten", "dokumente");
+export const ABLAGE = path.join(DATEN, "dokumente");
 export function dateiSpeichern(inhalt: Buffer, endung: string): string {
   fs.mkdirSync(ABLAGE, { recursive: true });
   const name = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${endung.replace(/[^.\w]/g, "").slice(0, 6)}`;

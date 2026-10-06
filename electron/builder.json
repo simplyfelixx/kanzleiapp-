@@ -1,0 +1,41 @@
+{
+  "appId": "de.kanzlei.app",
+  "productName": "Kanzlei",
+  "directories": {
+    "app": "build/app",
+    "output": "dist"
+  },
+  "files": [
+    "main.cjs",
+    "kanzlei.ico",
+    "package.json",
+    "!**/node_modules/**"
+  ],
+  "asar": true,
+  "npmRebuild": false,
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "desktop/kanzlei.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Kanzlei",
+    "deleteAppDataOnUninstall": false,
+    "artifactName": "Kanzlei-Setup-${version}.${ext}"
+  },
+  "linux": {
+    "target": "dir"
+  },
+  "afterPack": "electron/nachPacken.cjs"
+}
