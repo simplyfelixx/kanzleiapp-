@@ -22,6 +22,7 @@ export default function Login() {
     const j = await r.json().catch(() => ({}));
     setLaeuft(false);
     if (!r.ok) return setFehler(j.fehler || "Anmeldung fehlgeschlagen");
+    if (einrichtung) { window.location.href = "/einrichtung"; return; } // nach dem ersten Admin: Einrichtungsassistent
     weiter();
   };
   const feld = (k: keyof typeof f, label: string, typ = "text", auto = "off") => (

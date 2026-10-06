@@ -10,6 +10,7 @@ const NUR: { pfad: string; rollen: Rolle[]; nurSchreiben?: boolean }[] = [
   { pfad: "/api/benutzer", rollen: ["admin"] },
   { pfad: "/einstellungen", rollen: ["admin"] },
   { pfad: "/einrichtung", rollen: ["admin"] },
+  { pfad: "/api/einrichtung", rollen: ["admin"] },
   { pfad: "/protokoll", rollen: ["admin", "anwalt"] },
   { pfad: "/api/protokoll", rollen: ["admin", "anwalt"] },
   { pfad: "/api/kanzlei", rollen: ["admin"], nurSchreiben: true },

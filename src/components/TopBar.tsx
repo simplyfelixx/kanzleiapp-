@@ -59,7 +59,8 @@ export default function TopBar() {
   if (path === "/login" || path === "/portal" || path.startsWith("/p/")) return null;
 
   // Mandantenportal und Ersteinrichtung haben keine Kanzlei-Leiste
-  if (path.startsWith("/mandantenportal") || path.startsWith("/einrichtung")) {
+  if (path.startsWith("/einrichtung")) return null;
+  if (path.startsWith("/mandantenportal")) {
     return (
       <div style={{ padding: "6px 12px", fontSize: 13.5, background: "#16191d", color: "#fff", display: "flex", gap: 12 }}>
         <span>Vorschau</span><Link href="/" style={{ color: "#c9d3ea" }}>← zurück zur Kanzlei-Ansicht</Link>
