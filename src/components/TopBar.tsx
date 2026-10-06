@@ -11,6 +11,7 @@ const hauptNav = [
   { href: "/", label: "Mein Tag", key: "F5" },
   { href: "/eingang", label: "Eingang", key: "F4" },
   { href: "/akten", label: "Akten" },
+  { href: "/phasen", label: "Phasen" },
   { href: "/mail", label: "Mail" },
   { href: "/fristen", label: "Fristen", key: "F6" },
   { href: "/abrechnung", label: "Abrechnung" },
@@ -18,7 +19,6 @@ const hauptNav = [
 ];
 const mehrNav = [
   { href: "/akte/214%2F26", label: "Akte Müller (Beispiel)" },
-  { href: "/phasen", label: "Phasen (Kanban)" },
   { href: "/vorlagen", label: "Vorlagen" },
   { href: "/portal-verwaltung", label: "Portal-Verwaltung" },
   { href: "/auswertungen", label: "Auswertungen" },

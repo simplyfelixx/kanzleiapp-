@@ -36,6 +36,8 @@ export async function PUT(req: Request, c: Ctx) {
   switch (b.art) {
     case "akte": {
       const erlaubt = ["titel", "phase", "prioritaet", "worum", "stand_vorliegend", "stand_ausstehend", "stand_naechster", "gebiet"];
+      const alt = d.prepare("SELECT phase FROM akten WHERE id=?").get(id) as { phase: string };
+      if ("phase" in b && s(b.phase) && s(b.phase) !== alt.phase) verlaufEintrag(id, `Phase: ${alt.phase} → ${s(b.phase)}`, wer());
       for (const k of erlaubt) if (k in b) d.prepare(`UPDATE akten SET ${k}=? WHERE id=?`).run(s(b[k]), id);
       break;
     }
