@@ -2,6 +2,7 @@
 import { dateiSpeichern, db, verlaufEintrag } from "./db";
 import { kostennote, type Kostennote, type Posten } from "./rvg";
 import { briefPdf } from "./schreiben";
+import { briefanschrift } from "./kontakte";
 
 export interface RechnungRow {
   id: number; nr: string; akte_id: string; datum: string; empfaenger: string; wert: number; posten: string;
@@ -29,11 +30,11 @@ export function vorschlag(akteId: string) {
   const d = db();
   const konto = d.prepare("SELECT position, gefordert FROM konto WHERE akte_id=?").all(akteId) as { position: string; gefordert: number }[];
   const wert = Math.round(konto.filter((k) => !IST_RA_POSTEN.test(k.position)).reduce((s, k) => s + k.gefordert, 0) * 100) / 100;
-  const v = d.prepare("SELECT name, adresse, zeichen FROM beteiligte WHERE akte_id=? AND rolle='Versicherung' LIMIT 1").get(akteId) as { name: string; adresse: string; zeichen: string } | undefined;
+  const v = d.prepare("SELECT name, ansprechpartner, adresse, zeichen, kontakt_id FROM beteiligte WHERE akte_id=? AND rolle='Versicherung' LIMIT 1").get(akteId) as { name: string; ansprechpartner: string; adresse: string; zeichen: string; kontakt_id: number | null } | undefined;
   const m = d.prepare("SELECT name FROM beteiligte WHERE akte_id=? AND rolle='Mandant' LIMIT 1").get(akteId) as { name: string } | undefined;
   return {
     wert, positionen: konto.filter((k) => !IST_RA_POSTEN.test(k.position)),
-    empfaenger: v ? [v.name, v.adresse].filter(Boolean).join("\n") : "",
+    empfaenger: v ? briefanschrift(v) : "",
     schadennummer: v?.zeichen ?? "", mandant: m?.name ?? "",
     bisher: rechnungen(akteId).filter((r) => r.status !== "storniert"),
   };

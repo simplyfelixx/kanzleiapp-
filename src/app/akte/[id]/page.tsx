@@ -205,6 +205,7 @@ export default function AktePage() {
       {panel && (
         <Seitenfenster titel={panel.id ? `${panel.rolle}: ${panel.name}` : "Neuer Beteiligter"} onClose={() => setPanel(null)}>
           <Feld label="Rolle"><select className="feld" value={panel.rolle} onChange={(e) => setPanel({ ...panel, rolle: e.target.value })}>{ROLLEN.map((r) => <option key={r}>{r}</option>)}</select></Feld>
+          {!["Mandant", "Gegner", "Zeuge"].includes(panel.rolle ?? "") && <AusAdressbuch rolle={panel.rolle ?? ""} verknuepft={(panel as { kontakt_id?: number | null }).kontakt_id ?? null} onWahl={(k) => setPanel({ ...panel, ...k, ansprechpartner: panel.ansprechpartner, zeichen: panel.zeichen, notiz: panel.notiz })} />}
           {([["name", "Name / Firma"], ["ansprechpartner", "Ansprechpartner"], ["adresse", "Adresse"], ["telefon", "Telefon"], ["email", "E-Mail"], ["zeichen", "Zeichen (Schaden-Nr., Kennzeichen, Az.)"], ["iban", "IBAN"]] as const).map(([k, l]) => (
             <Feld key={k} label={l}><input className="feld" style={{ width: "100%" }} value={String(panel[k] ?? "")} onChange={(e) => setPanel({ ...panel, [k]: e.target.value })} /></Feld>
           ))}
@@ -352,6 +353,34 @@ function Dokumente({ az, doks, neuladen, zeige }: { az: string; doks: DokumentRo
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Firma aus dem Adressbuch übernehmen (Name, Anschrift, Kontakt) – Schaden-Nr. und Ansprechpartner bleiben pro Akte. */
+function AusAdressbuch({ rolle, verknuepft, onWahl }: { rolle: string; verknuepft: number | null; onWahl: (k: Record<string, unknown>) => void }) {
+  const [suche, setSuche] = useState("");
+  const [treffer, setTreffer] = useState<{ id: number; name: string; art: string; plz_ort: string }[]>([]);
+  useEffect(() => {
+    if (suche.trim().length < 2) return setTreffer([]);
+    const art = rolle === "Versicherung" ? "" : rolle;
+    const t = setTimeout(() => fetch(`/api/kontakte?suche=${encodeURIComponent(suche)}${art ? "&art=" + encodeURIComponent(art) : ""}`).then((r) => r.json()).then((x) => setTreffer(x.slice(0, 6))), 150);
+    return () => clearTimeout(t);
+  }, [suche, rolle]);
+  const waehlen = async (id: number) => { const k = await fetch(`/api/kontakte/${id}?als=beteiligter`).then((r) => r.json()); const { rolle: _r, ...rest } = k; void _r; onWahl(rest); setSuche(""); setTreffer([]); };
+  return (
+    <div style={{ marginBottom: 10, position: "relative" }}>
+      <div className="lab" style={{ marginBottom: 3 }}>Aus Adressbuch {verknuepft ? <span style={{ color: "#1d7a43" }}>· verknüpft ✓</span> : ""}</div>
+      <input className="feld" style={{ width: "100%" }} placeholder="Name eintippen, z. B. HUK …" value={suche} onChange={(e) => setSuche(e.target.value)} />
+      {treffer.length > 0 && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: "100%", background: "#fff", border: "1px solid var(--line)", borderRadius: 4, boxShadow: "0 6px 18px rgba(0,0,0,.12)", zIndex: 30 }}>
+          {treffer.map((t) => (
+            <div key={t.id} onClick={() => waehlen(t.id)} style={{ padding: "7px 10px", cursor: "pointer", fontSize: 14.5, borderBottom: "1px solid var(--line2)" }}>
+              <b style={{ fontWeight: 500 }}>{t.name}</b> <span className="lab">{t.art}{t.plz_ort && ` · ${t.plz_ort}`}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

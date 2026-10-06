@@ -2,6 +2,7 @@ import { protokoll } from "@/lib/protokoll";
 import { wer } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { akteLaden, db, FALLFELDER, verlaufEintrag } from "@/lib/db";
+import { kontakteListe } from "@/lib/kontakte";
 import { schemaName } from "@/lib/dokerkennung";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export function GET(_: Request, c: Ctx) {
 export async function PUT(req: Request, c: Ctx) {
   const id = az(c);
   const d = db();
+  kontakteListe(); // stellt sicher, dass die Spalte kontakt_id existiert
   if (!d.prepare("SELECT 1 FROM akten WHERE id=?").get(id)) return NextResponse.json({ fehler: "nicht gefunden" }, { status: 404 });
   const b = await req.json().catch(() => ({}));
   const s = (v: unknown) => String(v ?? "").slice(0, 2000);
@@ -45,9 +47,9 @@ export async function PUT(req: Request, c: Ctx) {
       break;
     }
     case "beteiligter": {
-      const f = { rolle: s(b.rolle) || "Mandant", name: s(b.name), adresse: s(b.adresse), telefon: s(b.telefon), email: s(b.email), iban: s(b.iban), ansprechpartner: s(b.ansprechpartner), zeichen: s(b.zeichen), vorsteuer: b.vorsteuer ? 1 : 0, notiz: s(b.notiz) };
-      if (b.id) d.prepare(`UPDATE beteiligte SET rolle=@rolle,name=@name,adresse=@adresse,telefon=@telefon,email=@email,iban=@iban,ansprechpartner=@ansprechpartner,zeichen=@zeichen,vorsteuer=@vorsteuer,notiz=@notiz WHERE id=@id AND akte_id=@akte`).run({ ...f, id: Number(b.id), akte: id });
-      else d.prepare(`INSERT INTO beteiligte (akte_id,rolle,name,adresse,telefon,email,iban,ansprechpartner,zeichen,vorsteuer,notiz) VALUES (@akte,@rolle,@name,@adresse,@telefon,@email,@iban,@ansprechpartner,@zeichen,@vorsteuer,@notiz)`).run({ ...f, akte: id });
+      const f = { rolle: s(b.rolle) || "Mandant", name: s(b.name), adresse: s(b.adresse), telefon: s(b.telefon), email: s(b.email), iban: s(b.iban), ansprechpartner: s(b.ansprechpartner), zeichen: s(b.zeichen), vorsteuer: b.vorsteuer ? 1 : 0, notiz: s(b.notiz), kontakt_id: Number(b.kontakt_id) || null };
+      if (b.id) d.prepare(`UPDATE beteiligte SET rolle=@rolle,name=@name,adresse=@adresse,telefon=@telefon,email=@email,iban=@iban,ansprechpartner=@ansprechpartner,zeichen=@zeichen,vorsteuer=@vorsteuer,notiz=@notiz,kontakt_id=@kontakt_id WHERE id=@id AND akte_id=@akte`).run({ ...f, id: Number(b.id), akte: id });
+      else d.prepare(`INSERT INTO beteiligte (akte_id,rolle,name,adresse,telefon,email,iban,ansprechpartner,zeichen,vorsteuer,notiz,kontakt_id) VALUES (@akte,@rolle,@name,@adresse,@telefon,@email,@iban,@ansprechpartner,@zeichen,@vorsteuer,@notiz,@kontakt_id)`).run({ ...f, akte: id });
       break;
     }
     case "beteiligter_loeschen":
