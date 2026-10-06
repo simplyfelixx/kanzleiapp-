@@ -1,6 +1,7 @@
 import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
 import { anmelden, anzahlBenutzer, sitzungsCookie } from "@/lib/auth";
+import { kiVorladen } from "@/lib/ki";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
     await new Promise((x) => setTimeout(x, 400));
     return NextResponse.json({ fehler: r.fehler }, { status: 401 });
   }
+  kiVorladen(); // KI schon beim Anmelden in den Speicher laden
   protokoll({ kategorie: "anmeldung", aktion: "Angemeldet", benutzer: { id: r.s.u, kuerzel: r.s.k } });
   const res = NextResponse.json({ ok: true, kuerzel: r.s.k, rolle: r.s.r });
   res.cookies.set(await sitzungsCookie(r.s));

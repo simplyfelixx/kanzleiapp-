@@ -32,6 +32,29 @@ export function lokaleUrl(u: string): boolean {
 
 export class KiFehler extends Error {}
 
+/** Wie lange Ollama das Modell nach der letzten Nutzung im Arbeitsspeicher hält (statt 5 Minuten Standard) */
+export const HALTEN = "8h";
+const geladen = new Map<string, number>(); // Modell -> Zeitpunkt des letzten Vorladens
+
+/**
+ * Lädt das Modell vorab in den Arbeitsspeicher (leere Anfrage an Ollama), damit die erste Auswertung sofort startet.
+ * Läuft im Hintergrund, Fehler werden ignoriert. Höchstens alle 10 Minuten pro Modell.
+ */
+export function kiVorladen(e = kiLaden()) {
+  if (!e.aktiv) return;
+  const modelle = [e.modell, ...(e.ocr ? [e.ocrModell] : [])];
+  for (const m of modelle) {
+    if ((geladen.get(m) ?? 0) > Date.now() - 10 * 60_000) continue;
+    geladen.set(m, Date.now());
+    try {
+      fetch(basis(e) + "/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
+        body: JSON.stringify({ model: m, keep_alive: HALTEN }), signal: AbortSignal.timeout(180_000),
+      }).catch(() => geladen.delete(m));
+    } catch { geladen.delete(m); }
+  }
+}
+
 function basis(e: KiEinstellungen) {
   if (!lokaleUrl(e.url)) throw new KiFehler("KI-Adresse ist nicht lokal");
   return e.url.replace(/\/+$/, "");
@@ -67,7 +90,7 @@ export async function kiJson<T>(system: string, eingabe: string, schema: object,
     r = await fetch(basis(e) + "/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store", signal,
       body: JSON.stringify({
-        model: e.modell, stream: true, format: schema,
+        model: e.modell, stream: true, format: schema, keep_alive: HALTEN,
         options: { temperature: 0, num_ctx: 8192 },
         messages: [{ role: "system", content: system }, { role: "user", content: eingabe }],
       }),
@@ -118,7 +141,7 @@ export async function kiBildText(png: Buffer, o: { signal?: AbortSignal } = {}, 
       method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
       signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(180_000)]) : AbortSignal.timeout(180_000),
       body: JSON.stringify({
-        model: e.ocrModell, stream: false, options: { temperature: 0, num_ctx: 8192 },
+        model: e.ocrModell, stream: false, keep_alive: HALTEN, options: { temperature: 0, num_ctx: 8192 },
         messages: [{
           role: "user", images: [png.toString("base64")],
           content: "Schreibe den gesamten Text dieses gescannten Dokuments wörtlich ab, Zeile für Zeile, ohne Kommentar. Beträge, Daten und Nummern exakt übernehmen. Tabellen als Zeilen mit | trennen.",

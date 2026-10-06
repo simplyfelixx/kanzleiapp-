@@ -1,6 +1,6 @@
 import { protokoll } from "@/lib/protokoll";
 import { NextResponse } from "next/server";
-import { kiLaden, kiSpeichern, lokaleUrl } from "@/lib/ki";
+import { kiLaden, kiSpeichern, kiVorladen, lokaleUrl } from "@/lib/ki";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,7 @@ export async function PUT(req: Request) {
   const ocrModell = typeof b.ocrModell === "string" && /^[\w.:\/-]{1,80}$/.test(b.ocrModell.trim()) ? b.ocrModell.trim() : alt.ocrModell;
   const neu = { aktiv: typeof b.aktiv === "boolean" ? b.aktiv : alt.aktiv, url, modell, ocr: typeof b.ocr === "boolean" ? b.ocr : alt.ocr, ocrModell };
   kiSpeichern(neu);
+  kiVorladen(neu);
   protokoll({ kategorie: "einstellungen", aktion: "KI-Einstellungen geändert", details: `aktiv=${neu.aktiv}, Modell ${neu.modell}, OCR=${neu.ocr} (${neu.ocrModell}), ${neu.url}` });
   return NextResponse.json(neu);
 }
