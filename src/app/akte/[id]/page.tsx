@@ -74,11 +74,11 @@ export default function AktePage() {
       <div style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "14px 24px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Kopf */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <Link href="/akten" className="lab" style={{ textDecoration: "none" }}>← Akten</Link>
+          <Link href="/akten" className="btn" style={{ textDecoration: "none", fontSize: 15 }}>← Akten</Link>
           <span className="dot" style={{ background: prioFarbe[akte.prioritaet as Prioritaet] ?? "var(--grau)" }} />
-          <Inline value={akte.titel} onSave={(v) => speichern({ art: "akte", titel: v })} style={{ fontSize: 20, fontWeight: 600 }} />
+          <Inline value={akte.titel} onSave={(v) => speichern({ art: "akte", titel: v })} style={{ fontSize: 22, fontWeight: 600 }} />
           <span className="k">{akte.gebiet}</span>
-          <span className="lab mono">Az. {akte.id}</span>
+          <span className="mono" style={{ fontSize: 17, fontWeight: 500, color: "#3a3f47" }}>Az. {akte.id}</span>
           <div style={{ flex: 1 }} />
           <button className="btn pri" onClick={() => setSchreiben(true)}>✉ Schreiben erstellen</button>
           <select className="feld" value={akte.prioritaet} onChange={(e) => speichern({ art: "akte", prioritaet: e.target.value })}>
@@ -95,11 +95,11 @@ export default function AktePage() {
             <div key={b.id} style={{ padding: "10px 14px", borderRight: "1px solid var(--line)", borderBottom: "1px solid var(--line)", background: b.rolle === "Versicherung" ? "var(--akzent-bg)" : undefined }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span className="lab">{b.rolle}{b.ansprechpartner && ` · ${b.ansprechpartner}`}</span>
-                <button className="btn" style={{ padding: "1px 7px", fontSize: 12.5 }} onClick={() => setPanel(b)}>Bearbeiten</button>
+                <button className="btn" style={{ padding: "1px 7px", fontSize: 13.5 }} onClick={() => setPanel(b)}>Bearbeiten</button>
               </div>
               <div style={{ fontWeight: 500 }}>{b.name || "–"}</div>
-              {b.telefon && <div className="mono" style={{ fontSize: 14.5, fontWeight: b.rolle === "Versicherung" ? 600 : 400 }}>{b.telefon} <a href={`tel:${b.telefon.replace(/[^\d+]/g, "")}`} style={{ fontSize: 12.5 }}>anrufen</a></div>}
-              {b.zeichen && <div className="mono" style={{ fontSize: 13.5 }}>{b.rolle === "Versicherung" ? "Schaden-Nr. " : ""}{b.zeichen} <a href="#" style={{ fontSize: 12.5 }} onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(b.zeichen); zeige("Kopiert"); }}>kopieren</a></div>}
+              {b.telefon && <div className="mono" style={{ fontSize: 14.5, fontWeight: b.rolle === "Versicherung" ? 600 : 400 }}>{b.telefon} <a href={`tel:${b.telefon.replace(/[^\d+]/g, "")}`} style={{ fontSize: 13.5 }}>anrufen</a></div>}
+              {b.zeichen && <div className="mono" style={{ fontSize: 13.5 }}>{b.rolle === "Versicherung" ? "Schaden-Nr. " : ""}{b.zeichen} <a href="#" style={{ fontSize: 13.5 }} onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(b.zeichen); zeige("Kopiert"); }}>kopieren</a></div>}
             </div>
           ))}
           <div style={{ padding: "10px 14px", display: "flex", alignItems: "center" }}>
@@ -150,7 +150,7 @@ export default function AktePage() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span className="th">Fall</span>
-              <button className="btn" style={{ padding: "1px 7px", fontSize: 12.5 }} onClick={() => setFallEdit({ ...fall })}>Bearbeiten</button>
+              <button className="btn" style={{ padding: "1px 7px", fontSize: 13.5 }} onClick={() => setFallEdit({ ...fall })}>Bearbeiten</button>
             </div>
             {FALLFELDER.map(([k, l]) => (
               <div className="fr" key={k} style={{ gridTemplateColumns: "150px 1fr" }}>

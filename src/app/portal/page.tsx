@@ -20,7 +20,7 @@ export default function Portal() {
     <div style={{ background: "#f5f6f8", minHeight: "100vh", overflow: "auto" }}>
       <PortalView a={a} />
       <div style={{ textAlign: "center", paddingBottom: 24 }}>
-        <a href="#" style={{ fontSize: 13, color: "#6b7178" }} onClick={async (e) => { e.preventDefault(); await fetch("/api/portal/abmelden", { method: "POST" }); setFehler("Abgemeldet"); }}>Abmelden</a>
+        <a href="#" style={{ fontSize: 13.5, color: "#6b7178" }} onClick={async (e) => { e.preventDefault(); await fetch("/api/portal/abmelden", { method: "POST" }); setFehler("Abgemeldet"); }}>Abmelden</a>
       </div>
     </div>
   );

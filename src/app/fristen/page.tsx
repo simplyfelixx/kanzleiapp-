@@ -124,9 +124,9 @@ export default function Fristen() {
                     </div>
                     {items.slice(0, 4).map((f) => (
                       <Link key={f.id} href={`/akte/${encodeURIComponent(f.akte_id)}`} title={`${f.akte_titel} – ${f.titel}`}
-                        style={{ display: "block", marginTop: 3, padding: "2px 6px", borderRadius: 3, fontSize: 13, lineHeight: 1.35, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                        style={{ display: "block", marginTop: 3, padding: "2px 6px", borderRadius: 3, fontSize: 13.5, lineHeight: 1.35, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                           background: f.art === "frist" ? "#f8d9d4" : "#e3e8f2", color: f.art === "frist" ? "#8a2416" : "#16191d", borderLeft: `3px solid ${f.art === "frist" ? "var(--rot)" : "#8a99b8"}` }}>
-                        <span className="mono" style={{ fontSize: 12 }}>{f.akte_id}</span> {f.titel}
+                        <span className="mono" style={{ fontSize: 13.5 }}>{f.akte_id}</span> {f.titel}
                       </Link>
                     ))}
                     {items.length > 4 && <div className="lab" style={{ marginTop: 3 }}>+{items.length - 4} weitere</div>}

@@ -104,14 +104,14 @@ export default function Eingang() {
           {liste.map((e, i) => (
             <div key={e.id} className={"row" + (i === idx ? " sel" : "")} style={{ gridTemplateColumns: "16px 56px 1fr 70px", padding: "11px 16px", alignItems: "start" }} onClick={() => setIdx(i)}>
               <span className={"cb" + (auswahl.has(e.id) ? " on" : "")} onClick={(ev) => { ev.stopPropagation(); toggle(e.id); }}>{auswahl.has(e.id) ? "✓" : ""}</span>
-              <span className="mono" style={{ fontSize: 11.5, textAlign: "center", border: "1px solid #d5d8dc", borderRadius: 3, color: e.quelle === "beA" ? "var(--akzent)" : "#3a3f47" }}>{e.quelle}</span>
+              <span className="mono" style={{ fontSize: 13.5, textAlign: "center", border: "1px solid #d5d8dc", borderRadius: 3, color: e.quelle === "beA" ? "var(--akzent)" : "#3a3f47" }}>{e.quelle}</span>
               <div>
                 <div style={{ fontWeight: 500 }}>{e.typ}</div>
                 <div className="lab" style={{ fontSize: 13.5 }}>{e.absender} → {(zuordnung[e.id] ?? e.akte_id) ? <span className="mono">{zuordnung[e.id] ?? e.akte_id}</span> : <span style={{ color: "#B5620A" }}>Akte unklar</span>}</div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div className="lab mono">{e.zeit}</div>
-                <div style={{ fontSize: 12.5, color: e.sicher ? "var(--gruen)" : "#B5620A" }}>{e.sicher ? "sicher" : "unklar"}</div>
+                <div style={{ fontSize: 13.5, color: e.sicher ? "var(--gruen)" : "#B5620A" }}>{e.sicher ? "sicher" : "unklar"}</div>
               </div>
             </div>
           ))}

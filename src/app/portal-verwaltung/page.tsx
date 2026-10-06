@@ -75,7 +75,7 @@ export default function PortalVerwaltung() {
                   <div style={{ marginTop: 8, padding: 10, border: "1px solid #9fd3b0", background: "#eef8f1", borderRadius: 4, fontSize: 13.5 }}>
                     <div style={{ marginBottom: 4 }}>Link für den Mandanten – <b>wird nur jetzt angezeigt</b>:</div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <input className="feld mono" readOnly value={link} style={{ flex: 1, fontSize: 12.5 }} onFocus={(e) => e.target.select()} />
+                      <input className="feld mono" readOnly value={link} style={{ flex: 1, fontSize: 13.5 }} onFocus={(e) => e.target.select()} />
                       <button className="btn" onClick={() => { navigator.clipboard.writeText(link); zeige("Link kopiert"); }}>Kopieren</button>
                     </div>
                   </div>

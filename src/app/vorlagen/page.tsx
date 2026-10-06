@@ -78,7 +78,7 @@ export default function Vorlagen() {
             </div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               <span className="lab" style={{ marginRight: 4 }}>Platzhalter einfügen:</span>
-              {platzhalter.map((p) => <span key={p} className="chip" style={{ padding: "1px 6px", fontSize: 12.5 }} onClick={() => einfuegen(p)}>{p}</span>)}
+              {platzhalter.map((p) => <span key={p} className="chip" style={{ padding: "1px 6px", fontSize: 13.5 }} onClick={() => einfuegen(p)}>{p}</span>)}
             </div>
             <textarea ref={ta} className="feld" style={{ width: "100%", minHeight: 360, fontSize: 15, lineHeight: 1.6, fontFamily: "Georgia, serif", padding: 14 }} value={v.text} onChange={(e) => setV({ ...v, text: e.target.value })} />
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

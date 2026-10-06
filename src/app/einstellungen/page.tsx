@@ -141,17 +141,17 @@ export default function Einstellungen() {
         {/* Live-Vorschau Briefkopf */}
         <div>
           <div className="th" style={{ marginBottom: 8 }}>Vorschau</div>
-          <div style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)", padding: "34px 40px", aspectRatio: "1 / 1.414", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 12.5, position: "relative" }}>
+          <div style={{ background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)", padding: "34px 40px", aspectRatio: "1 / 1.414", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 13.5, position: "relative" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div><div style={{ color: k.akzent, fontWeight: 700, fontSize: 19 }}>{k.name}</div><div style={{ color: "#666", fontSize: 9 }}>{k.zusatz}</div></div>
+              <div><div style={{ color: k.akzent, fontWeight: 700, fontSize: 19 }}>{k.name}</div><div style={{ color: "#666", fontSize: 13.5 }}>{k.zusatz}</div></div>
               {k.logo && <img src={`/api/kanzlei/logo?v=${logoV}`} alt="" style={{ maxHeight: 48, maxWidth: 140 }} />}
             </div>
             <div style={{ borderTop: `1px solid ${k.akzent}`, margin: "10px 0 26px" }} />
-            <div style={{ color: "#666", fontSize: 7 }}>{k.name} · {k.strasse} · {k.ort}</div>
+            <div style={{ color: "#666", fontSize: 13.5 }}>{k.name} · {k.strasse} · {k.ort}</div>
             <div style={{ marginTop: 6, lineHeight: 1.4 }}>HUK-Coburg<br />Schadenabteilung<br />96444 Coburg</div>
             <div style={{ marginTop: 40, fontWeight: 700 }}>Schaden-Nr.: 77-4410-2</div>
             <div style={{ marginTop: 14, color: "#333", lineHeight: 1.6 }}>Sehr geehrte Damen und Herren,<br />…<br /><br /><span style={{ whiteSpace: "pre-wrap" }}>{k.signatur}</span></div>
-            <div style={{ position: "absolute", left: 40, right: 40, bottom: 26, borderTop: "0.5px solid #888", paddingTop: 4, color: "#666", fontSize: 7 }}>
+            <div style={{ position: "absolute", left: 40, right: 40, bottom: 26, borderTop: "0.5px solid #888", paddingTop: 4, color: "#666", fontSize: 13.5 }}>
               {[k.name, k.strasse, k.ort, k.telefon, k.email].filter(Boolean).join(" · ")}<br />{k.bank}
             </div>
           </div>

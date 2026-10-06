@@ -31,7 +31,7 @@ function AnhangKarte({ a, akten, vorschlag, neu }: { a: Anhang; akten: AkteKurz[
   return (
     <div style={{ border: "1px solid var(--line)", borderRadius: 6, background: "#fff", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--bg3)", borderBottom: "1px solid var(--line)" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: /\.pdf$/i.test(a.name) ? "#b3261e" : "#6b7178", borderRadius: 3, padding: "1px 5px" }}>{(a.name.match(/\.(\w+)$/)?.[1] ?? "?").toUpperCase()}</span>
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: "#fff", background: /\.pdf$/i.test(a.name) ? "#b3261e" : "#6b7178", borderRadius: 3, padding: "1px 5px" }}>{(a.name.match(/\.(\w+)$/)?.[1] ?? "?").toUpperCase()}</span>
         <b style={{ fontWeight: 500, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.name}>{a.name}</b>
         <span className="lab">{kb(a.groesse)}</span>
         <a className="btn" style={{ textDecoration: "none" }} href={`/api/mail/anhang/${a.id}`} target="_blank" rel="noopener noreferrer">Öffnen</a>

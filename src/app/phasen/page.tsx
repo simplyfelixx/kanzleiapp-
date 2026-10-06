@@ -74,8 +74,8 @@ export default function Phasen() {
                       </div>
                       <div style={{ fontSize: 14.5, fontWeight: 500, margin: "2px 0" }}>{a.mandant ?? a.titel}</div>
                       <div className="lab">{a.versicherung ?? a.titel.split("./.")[1]?.trim() ?? ""}{a.phase !== s.name && <> · {a.phase}</>}</div>
-                      {a.stand_naechster && <div style={{ fontSize: 13, marginTop: 4, color: "#3a3f47" }}>→ {a.stand_naechster.split(" · ")[0]}</div>}
-                      {a.offen > 0 && <div className="mono" style={{ fontSize: 13, marginTop: 3, color: "#B5620A" }}>offen {euro(a.offen)}</div>}
+                      {a.stand_naechster && <div style={{ fontSize: 13.5, marginTop: 4, color: "#3a3f47" }}>→ {a.stand_naechster.split(" · ")[0]}</div>}
+                      {a.offen > 0 && <div className="mono" style={{ fontSize: 13.5, marginTop: 3, color: "#B5620A" }}>offen {euro(a.offen)}</div>}
                     </div>
                   ))}
                   {karten.length === 0 && <div className="lab" style={{ textAlign: "center", padding: "18px 0" }}>hierher ziehen</div>}

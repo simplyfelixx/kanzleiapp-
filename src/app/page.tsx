@@ -79,7 +79,7 @@ export default function MeinTag() {
           {liste.map((x, i) => (
             <div key={x.key} className={"row" + (i === idx ? " sel" : "")} style={{ gridTemplateColumns: "4px 80px 70px 230px 1fr", padding: "11px 20px 11px 0" }} onClick={() => setIdx(i)}>
               <span style={{ alignSelf: "stretch", background: prioFarbe[x.prio] }} />
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: prioFarbe[x.prio] }}>{prioLabel[x.prio]}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: prioFarbe[x.prio] }}>{prioLabel[x.prio]}</span>
               <span className="k" style={{ justifySelf: "start" }}>{x.typ === "v" ? "Vorgang" : x.f.art === "frist" ? "Frist" : "WV"}</span>
               <span><span className="mono lab">{x.typ === "v" ? x.v.akte_id : x.f.akte_id}</span> <b style={{ fontWeight: 500 }}>{x.typ === "v" ? x.v.akte_titel : x.f.akte_titel}</b></span>
               <span>{x.typ === "v" ? x.v.titel : `${x.f.titel} · ${datumDE(x.f.datum)}`}</span>
