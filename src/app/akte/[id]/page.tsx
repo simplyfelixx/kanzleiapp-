@@ -15,7 +15,7 @@ const FALLFELDER = [
   ["akteneinsicht", "Akteneinsicht"], ["haftung", "Haftung"], ["vollkasko", "Vollkasko / SB"], ["rsv", "Rechtsschutz"],
   ["fahrbereit", "Fahrbereit / Reparatur"], ["finanzierung", "Finanzierung / Leasing"], ["mw_kuerzung", "MW-Kürzung"],
 ] as const;
-const ROLLEN = ["Mandant", "Gegner", "Versicherung", "Werkstatt", "Gutachter", "Bank", "Polizei", "Zeuge"];
+const ROLLEN = ["Mandant", "Fahrer", "Gegner", "Versicherung", "Werkstatt", "Gutachter", "Bank", "Polizei", "Zeuge"];
 const PHASEN = ["Mandat", "Unterlagen", "Anspruch", "Prüffrist", "Kürzung", "Klage", "Abschluss"];
 const PRIOS: [Prioritaet, string][] = [["heute", "Heute"], ["woche", "Diese Woche"], ["pruefen", "Prüfen"], ["wartet", "Wartet"], ["laeuft", "Läuft"]];
 
@@ -205,7 +205,7 @@ export default function AktePage() {
       {panel && (
         <Seitenfenster titel={panel.id ? `${panel.rolle}: ${panel.name}` : "Neuer Beteiligter"} onClose={() => setPanel(null)}>
           <Feld label="Rolle"><select className="feld" value={panel.rolle} onChange={(e) => setPanel({ ...panel, rolle: e.target.value })}>{ROLLEN.map((r) => <option key={r}>{r}</option>)}</select></Feld>
-          {!["Mandant", "Gegner", "Zeuge"].includes(panel.rolle ?? "") && <AusAdressbuch rolle={panel.rolle ?? ""} verknuepft={(panel as { kontakt_id?: number | null }).kontakt_id ?? null} onWahl={(k) => setPanel({ ...panel, ...k, ansprechpartner: panel.ansprechpartner, zeichen: panel.zeichen, notiz: panel.notiz })} />}
+          {!["Mandant", "Fahrer", "Gegner", "Zeuge"].includes(panel.rolle ?? "") && <AusAdressbuch rolle={panel.rolle ?? ""} verknuepft={(panel as { kontakt_id?: number | null }).kontakt_id ?? null} onWahl={(k) => setPanel({ ...panel, ...k, ansprechpartner: panel.ansprechpartner, zeichen: panel.zeichen, notiz: panel.notiz })} />}
           {([["name", "Name / Firma"], ["ansprechpartner", "Ansprechpartner"], ["adresse", "Adresse"], ["telefon", "Telefon"], ["email", "E-Mail"], ["zeichen", "Zeichen (Schaden-Nr., Kennzeichen, Az.)"], ["iban", "IBAN"]] as const).map(([k, l]) => (
             <Feld key={k} label={l}><input className="feld" style={{ width: "100%" }} value={String(panel[k] ?? "")} onChange={(e) => setPanel({ ...panel, [k]: e.target.value })} /></Feld>
           ))}

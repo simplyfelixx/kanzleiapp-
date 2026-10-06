@@ -9,6 +9,9 @@ export interface Erkannt {
   gegner: string;
   kennzeichen: string;
   versicherung: string;
+  schadennummer: string;
+  vollkasko: string;
+  fahrer: string;
   rsv: string;
   unfalltag: string;
   unfallort: string;
@@ -22,7 +25,7 @@ export interface Erkannt {
 }
 
 export const LEER: Erkannt = {
-  mandant: "", telefon: "", email: "", adresse: "", gegner: "", kennzeichen: "", versicherung: "", rsv: "",
+  mandant: "", telefon: "", email: "", adresse: "", gegner: "", kennzeichen: "", versicherung: "", schadennummer: "", vollkasko: "", fahrer: "", rsv: "",
   unfalltag: "", unfallort: "", schilderung: "", polizei: "", verletzt: "", fahrbereit: "", finanzierung: "", ausfall: "", gutachter: "",
 };
 
@@ -48,13 +51,28 @@ export function erkenne(text: string, heute = new Date()): Erkannt {
   e.adresse = erstes(t, /(?:wohnt|Adresse|wohnhaft)[: ]+(?:in |im |am |an der )?([A-ZÄÖÜ][^,.;]*?\d+[a-z]?(?:,\s*\d{5}\s+[A-ZÄÖÜ][a-zäöüß-]+)?)/);
 
   // Gegner
-  e.gegner = erstes(t, new RegExp(`(?:Gegner|Unfallgegner|Unfallverursacher|Verursacher|Fahrer)(?:in)?\\s*(?:heißt|hei(?:ss)t|ist|war|:)?\\s+(?:Herr |Frau )?(${NAME}(?:\\s+${NAME})?)`));
+  e.gegner = erstes(t, new RegExp(`(?:Gegner|Unfallgegner|Unfallverursacher|Verursacher)(?:in)?\\s*(?:heißt|hei(?:ss)t|ist|war|:)?\\s+(?:Herr |Frau )?(${NAME}(?:\\s+${NAME})?)`));
   e.kennzeichen = erstes(t, /\b([A-ZÄÖÜ]{1,3}[- ][A-Z]{1,2} ?\d{1,4}[EH]?)\b/);
 
   // Versicherung (bevorzugt nach „versichert“)
   const nachVersichert = t.match(/versichert\s+(?:bei|über)\s+(?:der\s+|dem\s+)?([^,.;]+)/i)?.[1] ?? "";
   e.versicherung = VERSICHERUNGEN.find((v) => nachVersichert.toLowerCase().includes(v.toLowerCase()))
     ?? VERSICHERUNGEN.find((v) => new RegExp(`\\b${v.replace(/[+.]/g, "\\$&")}\\b`, "i").test(t.replace(/Rechtsschutz[^.]*\./gi, ""))) ?? "";
+
+  e.schadennummer = erstes(t, /(?:schaden-?(?:nr\.?|nummer)|schadennr\.?|aktenzeichen der versicherung|vers\.?-?nr\.?)[:\s]+([A-Z0-9][\w\/.-]{3,})/i).replace(/[.,]+$/, "");
+
+  // Vollkasko (eigene Versicherung des Mandanten), Selbstbeteiligung
+  const vkSatz = satzMit(t, /vollkasko|kasko/i);
+  if (vkSatz) {
+    if (/kein(?:e|en)? (?:voll)?kasko|nur teilkasko|nicht (?:voll)?kasko/i.test(vkSatz)) e.vollkasko = "nein";
+    else {
+      const sb = vkSatz.match(/(\d{2,4}(?:[.,]\d{2})?)\s*(?:€|euro|eur)?\s*(?:sb|selbstbeteiligung)|(?:sb|selbstbeteiligung)\D{0,15}(\d{2,4})/i);
+      e.vollkasko = "ja" + (sb ? ` · SB ${sb[1] ?? sb[2]} €` : "");
+    }
+  }
+
+  // Fahrer, falls nicht der Mandant (Halter) gefahren ist
+  e.fahrer = erstes(t, new RegExp(`(?:[Gg]efahren ist|[Aa]m Steuer saß|[Gg]efahren hat|[Ff]ahrer(?:in)? war)\\s+(?:sein[e]?\\s+\\w+\\s+|ihr[e]?\\s+\\w+\\s+)?(${NAME}(?:\\s+${NAME})?)`));
 
   const rsvSatz = satzMit(t, /rechtsschutz/i);
   if (rsvSatz) {
@@ -121,6 +139,8 @@ export function fehlt(e: Erkannt): { feld: keyof Erkannt; frage: string; grund: 
   if (!e.adresse) f.push({ feld: "adresse", frage: "Adresse des Mandanten?", grund: "für Vollmacht" });
   if (!e.email) f.push({ feld: "email", frage: "E-Mail für Portal-Link?", grund: "Mandantenportal" });
   if (!e.versicherung) f.push({ feld: "versicherung", frage: "Bei wem ist der Gegner versichert?", grund: "Schadensmeldung" });
+  else if (!e.schadennummer) f.push({ feld: "schadennummer", frage: "Schadennummer der Versicherung schon bekannt?", grund: "Zuordnung" });
+  if (!e.vollkasko) f.push({ feld: "vollkasko", frage: "Vollkasko vorhanden? Selbstbeteiligung?", grund: "Rückstufung/SB" });
   if (!e.kennzeichen) f.push({ feld: "kennzeichen", frage: "Kennzeichen des Gegners?", grund: "Zentralruf" });
   if (!e.unfalltag) f.push({ feld: "unfalltag", frage: "Wann war der Unfall?", grund: "Fristen" });
   if (!e.polizei) f.push({ feld: "polizei", frage: "War die Polizei vor Ort?", grund: "Akteneinsicht" });

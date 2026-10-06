@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const falldaten = {
     unfalltag: w.unfalltag, unfallort: w.unfallort, schilderung: w.schilderung, ausfall: w.ausfall,
     verletzt: w.verletzt, polizei: w.polizei, rsv: w.rsv, fahrbereit: w.fahrbereit, finanzierung: w.finanzierung,
+    vollkasko: w.vollkasko, fahrer: w.fahrer,
   };
   const ausstehend = [
     !w.adresse && "Adresse Mandant", "Vollmacht", !w.versicherung && "gegnerische Versicherung",
@@ -37,7 +38,8 @@ export async function POST(req: Request) {
     const ins = d.prepare("INSERT INTO beteiligte (akte_id,rolle,name,telefon,email,adresse,zeichen,notiz) VALUES (?,?,?,?,?,?,?,?)");
     ins.run(id, "Mandant", w.mandant, w.telefon ?? "", w.email ?? "", w.adresse ?? "", "", b.notiz ? `Fallaufnahme: ${String(b.notiz).slice(0, 2000)}` : "");
     if (w.gegner || w.kennzeichen) ins.run(id, "Gegner", w.gegner ?? "", "", "", "", w.kennzeichen ?? "", "");
-    if (w.versicherung) ins.run(id, "Versicherung", w.versicherung, "", "", "", "", "");
+    if (w.versicherung) ins.run(id, "Versicherung", w.versicherung, "", "", "", w.schadennummer ?? "", "");
+    if (w.fahrer) ins.run(id, "Fahrer", w.fahrer, "", "", "", "", "Fahrer des Mandantenfahrzeugs (nicht Halter)");
     verlaufEintrag(id, "Akte aus Fallaufnahme angelegt", wer());
     // Erster Vorgang für „Mein Tag“: Vollmacht und erste Schreiben vorbereiten
     d.prepare(`INSERT INTO vorgaenge (akte_id,prioritaet,titel,zusammenfassung,felder,aktion,wirkung) VALUES (?,?,?,?,?,?,?)`).run(

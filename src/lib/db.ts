@@ -55,6 +55,7 @@ export const FALLFELDER: { key: string; label: string }[] = [
   { key: "akteneinsicht", label: "Akteneinsicht" },
   { key: "haftung", label: "Haftung" },
   { key: "vollkasko", label: "Vollkasko / SB" },
+  { key: "fahrer", label: "Fahrer (wenn nicht Mandant)" },
   { key: "rsv", label: "Rechtsschutz" },
   { key: "fahrbereit", label: "Fahrbereit / Reparatur" },
   { key: "finanzierung", label: "Finanzierung / Leasing" },

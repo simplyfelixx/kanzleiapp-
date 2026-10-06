@@ -8,13 +8,16 @@ const FELDBESCHREIBUNG: Record<keyof Erkannt, string> = {
   mandant: "Name des Mandanten (Anrufer / Geschädigter)",
   telefon: "Telefonnummer des Mandanten", email: "E-Mail des Mandanten", adresse: "Anschrift des Mandanten",
   gegner: "Name des Unfallgegners", kennzeichen: "Kennzeichen des Gegners", versicherung: "Haftpflichtversicherung des Gegners",
-  rsv: "Rechtsschutzversicherung des Mandanten, Format „ja · Name“ oder „nein“",
-  unfalltag: "Datum und Uhrzeit des Unfalls, Format TT.MM.JJJJ, HH:MM; relative Angaben wie „gestern“ anhand des heutigen Datums umrechnen",
+  schadennummer: "Schadennummer der gegnerischen Versicherung, nur wenn ausdrücklich genannt",
+  vollkasko: "Vollkasko des Mandanten? Format „ja · SB 500 €“, „ja“, „nein“ oder „unsicher“",
+  fahrer: "Name des Fahrers des Mandantenfahrzeugs, NUR wenn nicht der Mandant selbst gefahren ist (sonst leer)",
+  rsv: "Rechtsschutzversicherung des Mandanten, Format „ja · Name“, „nein“ oder bei Vermutung „unsicher · Name“",
+  unfalltag: "Datum des Unfalls TT.MM.JJJJ, Uhrzeit nur wenn genannt („, ca. HH:MM“); Wochentage und „gestern“ mit der Tabelle unten umrechnen",
   unfallort: "Unfallort", schilderung: "Unfallhergang in einem sachlichen Satz",
   polizei: "Polizei vor Ort? Format „ja · Dienststelle“ oder „nein“",
-  verletzt: "Verletzungen? Format „ja · Art“ oder „nein“", fahrbereit: "Fahrzeug fahrbereit? „ja“ oder „nein“, ggf. mit Schäden",
+  verletzt: "Verletzungen? Format „ja · Art“ oder „nein“", fahrbereit: "Fahrzeug fahrbereit? „ja“ (auch bei „fährt noch“) oder „nein“, ggf. · Schäden",
   finanzierung: "Finanzierung/Leasing, Format „Leasing · Bank“ oder „Finanzierung · Bank“",
-  ausfall: "„Mietwagen“ oder „Nutzungsausfall“", gutachter: "„erwähnt“, „noch nicht beauftragt“ oder Name",
+  ausfall: "„Mietwagen“ oder „Nutzungsausfall“ – nur wenn der Mandant es ausdrücklich wünscht", gutachter: "„erwähnt“, „noch nicht beauftragt“ oder Name – nur wenn ein Gutachter erwähnt wird",
 };
 const KEYS = Object.keys(LEER) as (keyof Erkannt)[];
 
@@ -39,9 +42,13 @@ export async function kiFallaufnahme(text: string, o: KiOptionen & { status?: (s
   const system = [
     "Du bist Assistenz in einer deutschen Anwaltskanzlei für Verkehrsrecht und erfasst Angaben aus einer Telefonnotiz.",
     "Gib für jedes Feld den Wert und als Beleg die wörtliche Stelle aus der Notiz zurück (höchstens 15 Wörter).",
-    "Erfinde nichts. Steht etwas nicht in der Notiz, sind wert und beleg leere Strings.",
+    "Erfinde nichts. Steht etwas nicht ausdrücklich in der Notiz, sind wert und beleg leere Strings – keine Annahmen, keine Standardwerte, keine Uhrzeit 00:00.",
+    "Bei Vermutungen („glaub“, „vielleicht“, „irgendwas mit“) den Wert mit „unsicher · “ beginnen.",
+    "Bei Selbstkorrekturen („Freitag, nee Samstag“) gilt die letzte Angabe.",
     "Platzhalter wie [PERSON_1] oder [TEL_1] unverändert übernehmen.",
     `Heute ist ${heute.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}.`,
+    // Kalender der letzten 8 Tage – kleine Modelle rechnen Wochentage sonst falsch
+    "Letzte Tage: " + Array.from({ length: 8 }, (_, i) => { const d = new Date(heute); d.setDate(d.getDate() - i); return `${i === 0 ? "heute" : i === 1 ? "gestern" : i === 2 ? "vorgestern" : d.toLocaleDateString("de-DE", { weekday: "long" })} = ${d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}`; }).join(", ") + ".",
     "Felder:", ...KEYS.map((k) => `- ${k}: ${FELDBESCHREIBUNG[k]}`),
   ].join("\n");
   const roh = await kiJson<Record<string, { wert?: string; beleg?: string }>>(system, p.text, schema, {

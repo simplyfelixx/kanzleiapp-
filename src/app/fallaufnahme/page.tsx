@@ -6,9 +6,9 @@ import { useStore } from "@/components/Store";
 
 const FELDER: { k: keyof Erkannt; l: string }[] = [
   { k: "mandant", l: "Mandant" }, { k: "telefon", l: "Telefon" }, { k: "email", l: "E-Mail" }, { k: "adresse", l: "Adresse" },
-  { k: "gegner", l: "Gegner" }, { k: "kennzeichen", l: "Kennzeichen" }, { k: "versicherung", l: "Versicherung" },
+  { k: "gegner", l: "Gegner" }, { k: "kennzeichen", l: "Kennzeichen" }, { k: "versicherung", l: "Gegn. Vers." }, { k: "schadennummer", l: "Schaden-Nr." },
   { k: "unfalltag", l: "Unfall" }, { k: "unfallort", l: "Ort" }, { k: "polizei", l: "Polizei" }, { k: "verletzt", l: "Verletzt" },
-  { k: "fahrbereit", l: "Fahrbereit" }, { k: "finanzierung", l: "Finanzierung" }, { k: "ausfall", l: "Ausfall" },
+  { k: "fahrbereit", l: "Fahrbereit" }, { k: "vollkasko", l: "Vollkasko" }, { k: "fahrer", l: "Fahrer" }, { k: "finanzierung", l: "Finanzierung" }, { k: "ausfall", l: "Ausfall" },
   { k: "rsv", l: "Rechtsschutz" }, { k: "gutachter", l: "Gutachter" },
 ];
 const BEISPIEL = "Herr Jonas Lange ruft an, 0176 5520 1934. Gestern gegen 17 Uhr auf der A7 Richtung Hannover kurz vor Ausfahrt Marmstorf ist ihm einer hinten drauf gefahren, im Stau. Gegner heißt Peter Kowalski, Kennzeichen HH-PK 4471, versichert bei der Allianz. Polizei war da, Autobahnpolizei. Auto ist noch fahrbereit, Heckklappe und Stoßstange kaputt. Er hat Nackenschmerzen, war beim Arzt. Auto ist geleast über VW Leasing. Er möchte lieber einen Mietwagen. Rechtsschutz hat er bei der ARAG.";
