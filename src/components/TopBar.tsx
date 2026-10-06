@@ -83,7 +83,7 @@ export default function TopBar() {
           </Link>
         ))}
         <span style={{ position: "relative", display: "flex" }}>
-          <a href="#" onClick={(e) => { e.preventDefault(); setMehr(!mehr); }} className={mehrNav.some((n) => aktiv(n.href)) ? "on" : ""}>Mehr ▾</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMehr(!mehr); }} className={mehrNav.some((n) => aktiv(n.href)) ? "on" : ""} style={{ whiteSpace: "nowrap" }}>Mehr ▾</a>
           {mehr && (
             <div style={{ position: "absolute", top: 30, left: 0, background: "#fff", border: "1px solid #c9ccd1", borderRadius: 4, boxShadow: "0 8px 24px rgba(0,0,0,.14)", padding: "4px 0", zIndex: 50, minWidth: 220 }}>
               {mehrNav.filter((n) => ich?.rolle === "admin" || !["/benutzer", "/einstellungen", "/einrichtung"].includes(n.href) && (ich?.rolle === "anwalt" || n.href !== "/protokoll")).map((n) => (
@@ -94,8 +94,8 @@ export default function TopBar() {
         </span>
       </nav>
       <div style={{ flex: 1 }} />
-      <Link href="/fallaufnahme" style={{ fontSize: 13.5, textDecoration: "none", border: "1px dashed #b9bec4", borderRadius: 4, padding: "5px 10px", color: "#16191d" }}>+ Fallaufnahme <span className="k">F3</span></Link>
-      <div className="search" style={{ width: 220 }}><span>Suchen …</span><span className="k">F2</span></div>
+      <Link href="/fallaufnahme" style={{ fontSize: 14, whiteSpace: "nowrap", textDecoration: "none", border: "1px dashed #b9bec4", borderRadius: 4, padding: "5px 10px", color: "#16191d" }}>+ Fallaufnahme <span className="k">F3</span></Link>
+      <div className="search" style={{ width: 110, flex: "none" }}><span>Suchen</span><span className="k">F2</span></div>
       <div className="avatar" title={ich ? `${ich.name} · ${ich.rolle} – klicken zum Abmelden` : ""} onClick={abmelden} style={{ cursor: "pointer" }}>{ich?.kuerzel ?? "…"}</div>
     </div>
   );

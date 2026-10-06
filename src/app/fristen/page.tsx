@@ -37,7 +37,7 @@ export default function Fristen() {
   const [neu, setNeu] = useState(false);
   const [form, setForm] = useState({ akteId: "", art: "wv", datum: iso(new Date(Date.now() + 7 * 864e5)), titel: "", wer: "" });
   const [ich, setIch] = useState("");
-  const [start, setStart] = useState(() => montag(new Date()));
+  const [monat, setMonat] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1, 12); });
   useEffect(() => { fetch("/api/auth/ich").then((r) => r.json()).then((u) => { setIch(u.kuerzel ?? ""); setForm((f) => ({ ...f, wer: f.wer || u.kuerzel || "" })); }).catch(() => {}); }, []);
 
   const laden = useCallback(() => fetch("/api/fristen").then((r) => r.json()).then(setListe), []);
@@ -55,10 +55,14 @@ export default function Fristen() {
   ];
 
   // Zwei Wochen ab Montag, wie ein Kalender
-  const tage = Array.from({ length: 14 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
+  // Ganzer Monat, Wochen von Montag bis Sonntag
+  const start = montag(monat);
+  const wochen = Math.ceil(((monat.getDay() + 6) % 7 + new Date(monat.getFullYear(), monat.getMonth() + 1, 0).getDate()) / 7);
+  const tage = Array.from({ length: wochen * 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
   const ueberfaellig = sicht.filter((f) => f.bestaetigt && f.datum < heute).length;
-  const zeitraum = (() => { const a = tage[0], b = tage[13]; return a.getMonth() === b.getMonth() ? `${MONAT[a.getMonth()]} ${a.getFullYear()}` : `${MONAT[a.getMonth()]} – ${MONAT[b.getMonth()]} ${b.getFullYear()}`; })();
-  const verschiebe = (w: number) => setStart((s) => { const x = new Date(s); x.setDate(x.getDate() + 7 * w); return x; });
+  const zeitraum = `${MONAT[monat.getMonth()]} ${monat.getFullYear()}`;
+  const verschiebe = (m: number) => setMonat((x) => new Date(x.getFullYear(), x.getMonth() + m, 1, 12));
+  const [tagWahl, setTagWahl] = useState<string | null>(null);
 
   const aktion = async (f: F, aktion: string, extra: object = {}) => {
     const r = await fetch(`/api/fristen/${f.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktion, ...extra }) });
@@ -96,40 +100,42 @@ export default function Fristen() {
           <button className="btn pri" onClick={anlegen}>Speichern</button>
         </div>
       )}
-      <div style={{ padding: "12px 24px 4px" }}>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 20, padding: "12px 24px 20px" }}>
+      {/* Links: Monatskalender */}
+      <div style={{ flex: "1.25 1 0", minWidth: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <b style={{ fontSize: 16.5, fontWeight: 600, minWidth: 220 }}>{zeitraum}</b>
-          <button className="btn" onClick={() => verschiebe(-1)} title="Woche zurück">‹</button>
-          <button className="btn" onClick={() => setStart(montag(new Date()))}>Heute</button>
-          <button className="btn" onClick={() => verschiebe(1)} title="Woche vor">›</button>
-          {ueberfaellig > 0 && <span style={{ fontSize: 13.5, color: "var(--rot)", marginLeft: 8 }}>{ueberfaellig} überfällig – siehe Liste unten</span>}
+          <b style={{ fontSize: 19, fontWeight: 600, minWidth: 170 }}>{zeitraum}</b>
+          <button className="btn" onClick={() => verschiebe(-1)} title="Monat zurück">‹</button>
+          <button className="btn" onClick={() => { const d = new Date(); setMonat(new Date(d.getFullYear(), d.getMonth(), 1, 12)); }}>Heute</button>
+          <button className="btn" onClick={() => verschiebe(1)} title="Monat vor">›</button>
           <div style={{ flex: 1 }} />
-          <span className="lab"><span style={{ display: "inline-block", width: 10, height: 10, background: "#f8d9d4", borderRadius: 2, marginRight: 4 }} />Frist
-            <span style={{ display: "inline-block", width: 10, height: 10, background: "#e3e8f2", borderRadius: 2, margin: "0 4px 0 12px" }} />Wiedervorlage</span>
+          <span className="lab"><span style={{ display: "inline-block", width: 11, height: 11, background: "#f8d9d4", borderRadius: 2, marginRight: 4 }} />Frist
+            <span style={{ display: "inline-block", width: 11, height: 11, background: "#e3e8f2", borderRadius: 2, margin: "0 4px 0 12px" }} />WV</span>
         </div>
-        <div style={{ border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden", background: "#fff" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr)) repeat(2,minmax(0,.6fr))", background: "var(--bg3)", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ flex: 1, minHeight: 0, border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr)) repeat(2,minmax(0,.55fr))", background: "var(--bg3)", borderBottom: "1px solid var(--line)" }}>
             {WT_MO.map((w, i) => <div key={w} className="th" style={{ padding: "6px 10px", borderLeft: i ? "1px solid #eceef0" : undefined }}>{w}</div>)}
           </div>
-          {[0, 1].map((woche) => (
-            <div key={woche} style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr)) repeat(2,minmax(0,.6fr))", borderTop: woche ? "1px solid var(--line)" : undefined }}>
+          {Array.from({ length: wochen }, (_, woche) => (
+            <div key={woche} style={{ flex: 1, minHeight: 86, display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr)) repeat(2,minmax(0,.55fr))", borderTop: woche ? "1px solid var(--line)" : undefined }}>
               {tage.slice(woche * 7, woche * 7 + 7).map((d, i) => {
                 const tag = iso(d), items = sicht.filter((f) => f.bestaetigt && f.datum === tag);
-                const istHeute = tag === heute, vorbei = tag < heute, we = i >= 5;
+                const istHeute = tag === heute, anderer = d.getMonth() !== monat.getMonth(), we = i >= 5, gewaehlt = tagWahl === tag;
                 return (
-                  <div key={tag} style={{ borderLeft: i ? "1px solid #eceef0" : undefined, padding: "6px 8px", minHeight: 92, background: istHeute ? "var(--sel)" : we ? "#fafbfc" : undefined, opacity: vorbei && !istHeute ? 0.55 : 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <span style={{ fontSize: 14, fontWeight: istHeute ? 700 : 500, color: istHeute ? "#fff" : we ? "var(--muted)" : undefined, background: istHeute ? "var(--akzent)" : undefined, borderRadius: 10, padding: istHeute ? "0 7px" : 0 }}>{d.getDate()}</span>
-                      {d.getDate() === 1 && <span className="lab">{MONAT[d.getMonth()].slice(0, 3)}</span>}
+                  <div key={tag} onClick={() => setTagWahl(gewaehlt ? null : tag)}
+                    style={{ borderLeft: i ? "1px solid #eceef0" : undefined, padding: "5px 6px", minWidth: 0, overflow: "hidden", cursor: "pointer",
+                      background: gewaehlt ? "var(--akzent-bg)" : istHeute ? "var(--sel)" : we || anderer ? "#fafbfc" : undefined, outline: gewaehlt ? "2px solid var(--akzent)" : undefined, outlineOffset: -2 }}>
+                    <div style={{ marginBottom: 3 }}>
+                      <span style={{ fontSize: 14.5, fontWeight: istHeute ? 700 : 500, color: istHeute ? "#fff" : anderer ? "#b0b4b9" : we ? "var(--muted)" : undefined, background: istHeute ? "var(--akzent)" : undefined, borderRadius: 10, padding: istHeute ? "0 7px" : 0 }}>{d.getDate()}</span>
                     </div>
-                    {items.slice(0, 4).map((f) => (
-                      <Link key={f.id} href={`/akte/${encodeURIComponent(f.akte_id)}`} title={`${f.akte_titel} – ${f.titel}`}
-                        style={{ display: "block", marginTop: 3, padding: "2px 6px", borderRadius: 3, fontSize: 13.5, lineHeight: 1.35, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    {items.slice(0, 3).map((f) => (
+                      <div key={f.id} title={`${f.akte_id} ${f.akte_titel} – ${f.titel}`}
+                        style={{ marginTop: 2, padding: "1px 5px", borderRadius: 3, fontSize: 13.5, lineHeight: 1.35, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                           background: f.art === "frist" ? "#f8d9d4" : "#e3e8f2", color: f.art === "frist" ? "#8a2416" : "#16191d", borderLeft: `3px solid ${f.art === "frist" ? "var(--rot)" : "#8a99b8"}` }}>
-                        <span className="mono" style={{ fontSize: 13.5 }}>{f.akte_id}</span> {f.titel}
-                      </Link>
+                        {f.akte_titel.split(" ")[0]} · {f.titel}
+                      </div>
                     ))}
-                    {items.length > 4 && <div className="lab" style={{ marginTop: 3 }}>+{items.length - 4} weitere</div>}
+                    {items.length > 3 && <div className="lab" style={{ marginTop: 2 }}>+{items.length - 3}</div>}
                   </div>
                 );
               })}
@@ -137,31 +143,44 @@ export default function Fristen() {
           ))}
         </div>
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: "0 24px 24px" }}>
-        {gruppen.map(([name, farbe, rows]) => rows.length > 0 && (
+
+      {/* Rechts: offene Fristen und Wiedervorlagen */}
+      <div style={{ flex: "1 1 0", minWidth: 460, overflow: "auto", borderLeft: "1px solid var(--line)", paddingLeft: 20 }}>
+        {tagWahl && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "var(--akzent-bg)", borderRadius: 4, marginBottom: 4 }}>
+            <span style={{ fontSize: 14.5 }}>Nur {WT[new Date(tagWahl + "T12:00").getDay()]} {de(tagWahl)}</span><div style={{ flex: 1 }} />
+            <button className="btn" onClick={() => setTagWahl(null)}>Alle zeigen</button>
+          </div>
+        )}
+        {gruppen.map(([name, farbe, alle]) => { const rows = tagWahl ? alle.filter((f) => f.datum === tagWahl) : alle; return rows.length > 0 && (
           <div key={name}>
-            <div className="th" style={{ padding: "14px 0 4px", color: farbe }}>{name} · {rows.length}</div>
+            <div className="th" style={{ padding: "12px 0 4px", color: farbe }}>{name} · {rows.length}</div>
             {rows.map((f) => (
-              <div key={f.id} className="row" style={{ gridTemplateColumns: "4px 130px 64px 90px 1fr 70px 300px", padding: "9px 0", cursor: "default", background: !f.bestaetigt ? "#fffbea" : undefined }}>
-                <span style={{ alignSelf: "stretch", background: farbe }} />
-                <DatumFeld wert={f.datum} onChange={(v) => aktion(f, "datum", { datum: v })} />
-                <span className="k" style={{ justifySelf: "start", color: f.art === "frist" ? "var(--rot)" : undefined }}>{f.art === "frist" ? "FRIST" : "WV"}</span>
-                <Link href={`/akte/${encodeURIComponent(f.akte_id)}`} className="mono" style={{ fontSize: 13.5 }}>{f.akte_id}</Link>
-                <span><b style={{ fontWeight: 500 }}>{f.akte_titel}</b> – {f.titel}{!f.bestaetigt && f.quelle && <span className="lab"> · Quelle: {f.quelle}</span>}</span>
-                <span className="lab">{f.wer || "–"}</span>
-                <span style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+              <div key={f.id} style={{ display: "grid", gridTemplateColumns: "4px 1fr auto", columnGap: 10, padding: "9px 0", borderBottom: "1px solid #e6e8eb", background: !f.bestaetigt ? "#fffbea" : undefined }}>
+                <span style={{ gridRow: "span 2", background: farbe, borderRadius: 2 }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <DatumFeld wert={f.datum} onChange={(v) => aktion(f, "datum", { datum: v })} />
+                  <span className="k" style={{ color: f.art === "frist" ? "var(--rot)" : undefined }}>{f.art === "frist" ? "FRIST" : "WV"}</span>
+                  <Link href={`/akte/${encodeURIComponent(f.akte_id)}`} className="mono" style={{ fontSize: 14 }}>{f.akte_id}</Link>
+                  <span className="lab">{f.wer || ""}</span>
+                </div>
+                <span style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
                   {f.bestaetigt
                     ? <button className="btn" onClick={() => aktion(f, "erledigt")}>Erledigt</button>
                     : <button className="btn pri" onClick={() => aktion(f, "bestaetigen")}>Bestätigen</button>}
                   <button className="btn" onClick={() => aktion(f, "verschieben", { tage: 1 })}>+1</button>
                   <button className="btn" onClick={() => aktion(f, "verschieben", { tage: 7 })}>+7</button>
-                  <button className="btn" onClick={() => aktion(f, "verschieben", { tage: 14 })}>+14</button>
                 </span>
+                <div style={{ gridColumn: "2 / span 2", fontSize: 15, paddingLeft: 8, marginTop: 2 }}>
+                  <b style={{ fontWeight: 500 }}>{f.akte_titel}</b> – {f.titel}{!f.bestaetigt && f.quelle && <span className="lab"> · Quelle: {f.quelle}</span>}
+                </div>
               </div>
             ))}
           </div>
-        ))}
+        ); })}
         {sicht.length === 0 && <div className="empty">Keine offenen Fristen oder Wiedervorlagen.</div>}
+        {tagWahl && !sicht.some((f) => f.datum === tagWahl) && <div className="empty">An diesem Tag nichts.</div>}
+      </div>
       </div>
     </>
   );
